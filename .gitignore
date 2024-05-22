@@ -4,3 +4,4 @@ __pycache__/
 /word_embeddings/news_word2vec.txt
 
 *.csv
+*.eps
