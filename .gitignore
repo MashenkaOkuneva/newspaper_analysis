@@ -6,3 +6,19 @@ __pycache__/
 *.csv
 *.eps
 *.xlsx
+
+# Ignore all files within specific directories
+/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BamS_Konjunktur_rtf/*
+/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BamS_Konjunktur_txt/*
+/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BILD_Konjunktur_rtf/*
+/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BILD_Konjunktur_txt/*
+/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_scrape_2011_2015_txt/*
+/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_scrape_2016_txt/*
+
+# Keep the directories
+!/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BamS_Konjunktur_rtf/
+!/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BamS_Konjunktur_txt/
+!/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BILD_Konjunktur_rtf/
+!/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BILD_Konjunktur_txt/
+!/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_scrape_2011_2015_txt/
+!/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_scrape_2016_txt/
