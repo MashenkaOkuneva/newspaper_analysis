@@ -22,3 +22,7 @@ __pycache__/
 !/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BILD_Konjunktur_txt/.gitkeep
 !/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_scrape_2011_2015_txt/.gitkeep
 !/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_scrape_2016_txt/.gitkeep
+!/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_Konjunktur_Factiva_rtf/.gitkeep
+!/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_Konjunktur_Factiva_txt/.gitkeep
+!/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_Konjunktur_LexisNexis_rtf/.gitkeep
+!/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_Konjunktur_LexisNexis_txt/.gitkeep
