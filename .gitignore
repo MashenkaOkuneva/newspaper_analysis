@@ -14,6 +14,10 @@ __pycache__/
 /MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BILD_Konjunktur_txt/*
 /MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_scrape_2011_2015_txt/*
 /MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_scrape_2016_txt/*
+/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_Konjunktur_Factiva_rtf/*
+/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_Konjunktur_Factiva_txt/*
+/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_Konjunktur_LexisNexis_rtf/*
+/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_Konjunktur_LexisNexis_txt/*
 
 # Keep the directories
 !/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BamS_Konjunktur_rtf/.gitkeep
