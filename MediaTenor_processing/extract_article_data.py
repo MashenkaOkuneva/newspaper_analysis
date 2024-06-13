@@ -33,6 +33,10 @@ def extract_article_data(bams_txt_path, bild_txt_path):
     # Process each path (BamS and BILD)
     for path in [bams_txt_path, bild_txt_path]:
         for filename in os.listdir(path):
+            # Ignore .gitkeep files
+            if filename == '.gitkeep':
+                continue
+            
             file.append(filename)
             with codecs.open(os.path.join(path, filename), "r", encoding='utf-8') as input_data:
                 # Initialize text list to store lead-in (if present) and the main text
