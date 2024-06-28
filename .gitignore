@@ -19,6 +19,10 @@ __pycache__/
 /MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_Konjunktur_LexisNexis_rtf/*
 /MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_Konjunktur_LexisNexis_txt/*
 /MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Focus_scrape_2011_2019_txt/*
+/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Focus_Konjunktur_Factiva_rtf/*
+/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Focus_Konjunktur_Factiva_txt/*
+/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Focus_Konjunktur_LexisNexis_rtf/*
+/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Focus_Konjunktur_LexisNexis_txt/*
 
 # Keep the directories
 !/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BamS_Konjunktur_rtf/.gitkeep
@@ -32,3 +36,7 @@ __pycache__/
 !/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_Konjunktur_LexisNexis_rtf/.gitkeep
 !/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Spiegel_Konjunktur_LexisNexis_txt/.gitkeep
 !/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Focus_scrape_2011_2019_txt/.gitkeep
+!/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Focus_Konjunktur_Factiva_rtf/.gitkeep
+!/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Focus_Konjunktur_Factiva_txt/.gitkeep
+!/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Focus_Konjunktur_LexisNexis_rtf/.gitkeep
+!/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/Focus_Konjunktur_LexisNexis_txt/.gitkeep
