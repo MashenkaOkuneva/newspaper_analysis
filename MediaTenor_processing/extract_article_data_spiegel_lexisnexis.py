@@ -119,7 +119,7 @@ def extract_article_data_spiegel_lexisnexis(spiegel_lexisnexis_txt_path):
                     j += 1
                 # Exit the loop if we have reached the end of the main text
                 if any(keyword in line for keyword in ['Graphic', 'Classification', 'Bibliography', 'Interview:']) or \
-                            (author.split(',')[0] in line and j > 5):
+                    (author.split(',')[0] in line and j > 5):
                     break
                     
                 # Check if the line is not empty and does not contain the 'Body' or 'Graphic' identifiers  
