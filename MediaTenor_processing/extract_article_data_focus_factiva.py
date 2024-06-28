@@ -37,7 +37,7 @@ def extract_article_data_focus_factiva(focus_txt_path):
         # Open each TXT file with UTF-8 encoding
         with codecs.open(os.path.join(focus_txt_path, f), "r", encoding='utf-8') as input_data:
             files.append(f)
-            text=[]
+            text = []
             author = 'null author'
             
             # Extract the title
