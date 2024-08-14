@@ -13,9 +13,10 @@ punctuation = punctuation + '»«'
 def preprocess(text):
     
     '''This function takes a string of text as input and returns a list 
-    of preprocessed tokens. The preprocessing steps include transforming the 
+    of pre-processed tokens. The pre-processing steps include transforming the 
     text to lowercase, removing punctuation, removing non-alphabetic characters, 
-    and reducing multiple whitespaces to a single space.'''
+    reducing multiple whitespaces to a single space, and removing single-letter 
+    tokens.'''
     
     # Transform the text to lowercase
     text = text.lower()
@@ -31,5 +32,8 @@ def preprocess(text):
     
     # Split the text into individual words (tokens)
     words = text.split()
+    
+    # Filter out all the words that are only one character long. 
+    words = [word for word in words if len(word)>1]
 
     return words
