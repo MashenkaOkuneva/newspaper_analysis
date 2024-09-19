@@ -10,6 +10,9 @@ __pycache__/
 !/sentiment/BPW_Dictionary.xlsx
 *.pth
 *.pickle
+*.sav
+*.pyc
+*.pkl
 
 # Ignore all files within specific directories
 /MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BamS_Konjunktur_rtf/*
