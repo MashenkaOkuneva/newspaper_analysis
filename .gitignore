@@ -4,6 +4,9 @@ __pycache__/
 /word_embeddings/news_word2vec.txt
 
 *.csv
+# Exceptions:
+!/topics/daily_topics.csv
+!/topics/topic_description.csv
 *.eps
 *.xlsx
 # Exceptions:
