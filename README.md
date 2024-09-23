@@ -72,7 +72,7 @@ The code was primarily run on a server equipped with the following specification
 - **Memory**: 256 GB RAM
 - **Operating System**: Windows Server 2022 Standard
 
-However, the LDA estimation and cross-validation for this model required more memory and were run on a different server with the following specifications:
+However, the LDA estimation and cross-validation for this model required more memory and were run on a different server:
 - **CPU**: 64-core 2.45 GHz AMD EPYC 7V12
 - **Memory**: 1024 GB RAM
 - **Operating System**: Windows Server 2022 Standard
