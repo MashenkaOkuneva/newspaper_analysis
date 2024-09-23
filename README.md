@@ -65,13 +65,6 @@ This project uses two separate Python environments: Python 3 for our current cod
 - **Python 3 Environment**: For the rest of the notebooks, use the `py3_env.yml` file to set up the appropriate Python 3 environment.
 
 ### System Requirements
-The code was run on a server equipped with the following specifications for optimal performance:
-- **CPU**: 16-core 2.4 GHz AMD EPYC 7351
-- **GPU**: NVIDIA GeForce RTX 2080 Ti
-- **Memory**: 256 GB RAM
-- **Operating System**: Windows Server 2022 Standard
-
-### System Requirements
 
 The code was primarily run on a server equipped with the following specifications for optimal performance:
 - **CPU**: 16-core 2.4 GHz AMD EPYC 7351
