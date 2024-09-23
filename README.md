@@ -55,3 +55,37 @@ The repository is organized into several folders, each dedicated to a specific p
   - **[Topic model estimation.ipynb](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/topics/Topic%20model%20estimation.ipynb)**: Estimates the LDA model on the training portion of the data and predicts document-specific topic distributions for the test data. It also generates daily, monthly, and quarterly time series for each topic.
   - **[Sign_adjusted_topics.ipynb](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/topics/Sign_adjusted_topics.ipynb)**: Generates sign-adjusted topic time series, visualizes them, and conducts robustness checks for the sentiment adjustment methodology.
   - **[Top N articles for Each Topic.ipynb](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/topics/Top%20N%20articles%20for%20Each%20Topic.ipynb)**: Explores the top N articles with the highest proportions of different topics, providing insight into the key discussions associated with those topics.
+
+## Project Environment Setup
+
+### Python Versions and Environment Setup
+This project uses two separate Python environments: Python 3 for our current code development and Python 2 to ensure compatibility with earlier work developed by others.
+
+- **Python 2 Environment**: For notebooks that require Python 2 (`Pre-processing (train data).ipynb`, `Pre-processing (test data).ipynb`, `Cross-validation, K={10,50,100}.ipynb`, `Cross-validation, K={150,200,250}.ipynb`, `Topic model estimation.ipynb`), please set up your environment using the `py2_env.yml` file available in this repository.
+- **Python 3 Environment**: For the rest of the notebooks, use the `py3_env.yml` file to set up the appropriate Python 3 environment.
+
+### System Requirements
+The code was run on a server equipped with the following specifications for optimal performance:
+- **CPU**: 16-core 2.4 GHz AMD EPYC 7351
+- **GPU**: NVIDIA GeForce RTX 2080 Ti
+- **Memory**: 256 GB RAM
+- **Operating System**: Windows Server 2022 Standard
+
+### System Requirements
+
+The code was primarily run on a server equipped with the following specifications for optimal performance:
+- **CPU**: 16-core 2.4 GHz AMD EPYC 7351
+- **GPU**: NVIDIA GeForce RTX 2080 Ti
+- **Memory**: 256 GB RAM
+- **Operating System**: Windows Server 2022 Standard
+
+However, the LDA estimation and cross-validation for this model required more memory and were run on a different server with the following specifications:
+- **CPU**: 64-core 2.45 GHz AMD EPYC 7V12
+- **Memory**: 1024 GB RAM
+- **Operating System**: Windows Server 2022 Standard
+
+## Usage and Citation
+Feel free to use the code provided in this repository for your research or projects. If you utilize this code, please cite the paper: Okuneva M., Hauber P., Carstensen K., & Bär J. (2024). Nowcasting German GDP with Text Data.
+
+## Contact
+If you have any questions about this repository or the related research, please feel free to contact Mariia Okuneva at [mokuneva@stat-econ.uni-kiel.de](mailto:mokuneva@stat-econ.uni-kiel.de).
