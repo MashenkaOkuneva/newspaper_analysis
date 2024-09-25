@@ -56,6 +56,11 @@ The repository is organized into several folders, each dedicated to a specific p
   - **[Sign_adjusted_topics.ipynb](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/topics/Sign_adjusted_topics.ipynb)**: Generates sign-adjusted topic time series, visualizes them, and conducts robustness checks for the sentiment adjustment methodology.
   - **[Top N articles for Each Topic.ipynb](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/topics/Top%20N%20articles%20for%20Each%20Topic.ipynb)**: Explores the top N articles with the highest proportions of different topics, providing insight into the key discussions associated with those topics.
 
+- **[forecasting](https://github.com/MashenkaOkuneva/newspaper_analysis/tree/main/forecasting)**:
+  - **[correlations.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/DFM/data/correlations.R)**: This script calculates the correlations between sign-adjusted topics and annualized quarterly GDP growth for each data vintage. It outputs CSV files containing the top 20 topics with the highest absolute correlations for each vintage. All resulting CSV files are available in the folder [correlations](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/DFM/data/correlations).
+  - **[stable_correlations.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/DFM/data/stable_correlations.R)**: This script identifies how frequently each topic appeared among the 10 topics most correlated with GDP growth across different data vintages. 
+  - **[average_correlation_selected_topics.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/DFM/data/average_correlation_selected_topics.R)**: This script calculates the average correlation across data vintages for topics selected for the out-of-sample forecasting experiment.
+
 ## Project Environment Setup
 
 ### Python Versions and Environment Setup

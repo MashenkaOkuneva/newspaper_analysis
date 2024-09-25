@@ -8,6 +8,8 @@ __pycache__/
 !/topics/daily_topics.csv
 !/topics/topic_description.csv
 !/topics/sign_adjusted_daily_topics_format.csv
+!/forecasting/DFM/data/correlations/*.csv
+!/forecasting/DFM/data/average_correlation_selected_topics.csv
 *.eps
 *.xlsx
 # Exceptions:
