@@ -18,6 +18,7 @@ __pycache__/
 *.xlsx
 # Exceptions:
 !/sentiment/BPW_Dictionary.xlsx
+!/sentiment/sentiment_lstm_quarter_combined.xlsx
 *.pth
 *.pickle
 *.sav
