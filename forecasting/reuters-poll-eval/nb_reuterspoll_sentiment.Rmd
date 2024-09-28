@@ -1,0 +1,651 @@
+---
+title: "Reuters poll data"
+output:
+  html_document:
+    df_print: paged
+---
+
+## Overview
+
+What this notebook does: 
+
+- load Reuters poll and GDP vintages
+- descriptive statistics of forecast errors, RMSFE
+- Mincer-Zarnowitz (MR) regressions to test forecast rationality
+- load sentiment series
+- compare sentiment with forecast errors visually
+- augmented MR tests
+- interpretation MR test results/forecast efficiency tests as in [Rambacussing and Kwiatkowski (2020, IJoF)](https://www.sciencedirect.com/science/article/abs/pii/S0169207020300595)
+- encompassing test for selected sign-adjusted topics
+
+Load required packages
+
+```{r echo=T, message = FALSE, warning = FALSE}
+library(lubridate)
+library(forcats)
+library(ggplot2)
+library(bundesbank)
+library(ggsci)
+library(dplyr)
+library(tidyr)
+```
+
+directories, evaluation set-up
+
+```{r}
+# clear workspace
+rm(list = ls())
+
+# directories
+dir_forecasts <- "/poll data/"
+dir_sentiment <- "/sentiment/"
+
+# filename
+fname_sentiment <- "sentiment_lstm_quarter.csv"
+
+# evaluation period
+yys <- 2006:2018 # years
+qqs <- 1:4 # quarters
+
+# max and min horizons
+max_h <- 3 # 3Q-ahead forecast (relative to the quarter in which the forecast is made)
+min_h <- -1 # backcast
+```
+
+## Reuters poll data
+
+function to read in and filter data
+
+```{r}
+get_forecasts <- function(yy, qq, dir_in, df_in, max_h, min_h)
+{
+  # define helper function
+  dropNA_first <- function(df)
+  # function that removes NA observations and drops first element
+  # output is a vector
+  {
+    tmp <- df[!is.na(df)] # rem NA
+    out <- tmp[-1] # drop first element
+  }
+  
+  # read in csv
+  dat <- read.csv(paste0(getwd(), dir_in, yy, "Q", qq, ".csv"))
+  # get row indices 
+  ind_median <- grep("median", dat[, 1], ignore.case = TRUE)
+  ind_min <- grep("min", dat[, 1], ignore.case = TRUE)
+  ind_max <- grep("max", dat[, 1], ignore.case = TRUE)
+  ind_date <- grep("consensus", dat[, 1], ignore.case = TRUE)
+
+  # extract values
+  dates_fore_tmp <- dmy(dropNA_first(dat[ind_date, ]))
+  medf_tmp <- as.numeric(dropNA_first(dat[ind_median, ]))
+  minf_tmp <- as.numeric(dropNA_first(dat[ind_min, ]))
+  maxf_tmp <- as.numeric(dropNA_first(dat[ind_max, ]))
+  quarter_date <- make_date(year = yy, month = 3 * qq - 2, day = 1) 
+  
+  # calculate forecast horizon (in quarters)
+  horizon_tmp <- round(as.numeric((quarter_date - dates_fore_tmp) / 90), digits = 0)
+  
+  # insert NA where no values are present between max_h and min_h
+  seq_h <- seq(max(c(max(horizon_tmp), max_h)), min(c(min(horizon_tmp), min_h)))
+  ind_h <- seq_h %in% horizon_tmp
+  tmp_NA <- rep(NA, length(seq_h))
+  medf <- tmp_NA; medf[which(ind_h)] <- medf_tmp
+  minf <- tmp_NA; minf[which(ind_h)] <- minf_tmp
+  maxf <- tmp_NA; maxf[which(ind_h)] <- maxf_tmp
+  dates_fore <- tmp_NA; dates_fore[which(ind_h)] <- dates_fore_tmp
+  dates_fore <- as_date(dates_fore)
+  horizon <- seq_h
+
+  # store in df
+  df <- data.frame(dates_fore = as_date(dates_fore), 
+                   med = medf,
+                   min = minf,
+                   max = maxf,
+                   quarter = quarter_date,
+                   horizon = horizon
+                  )
+  
+ df_out <- rbind(df_in, df)
+  
+ return(df_out)
+}
+```
+
+loop over years and quarters
+
+```{r}
+df <- data.frame() # initialize df
+for (yy in yys)
+{
+  for (qq in qqs)
+  {
+    df <- get_forecasts(yy, qq, dir_forecasts, df, max_h, min_h)
+  }
+}
+```
+
+focus on horizons 2Q- and 1Q-ahead forecasts, nowcasts and backcasts. Also, convert `df$horizon` to factor
+
+```{r}
+df <- df[df$horizon <= 2, ] 
+df$horizon <- paste0("h=", df$horizon)
+df$horizon <- factor(df$horizon)
+```
+
+summary statistics
+
+```{r}
+summary(df)
+```
+
+```{r, warning = FALSE, message = FALSE}
+ggplot(df, aes(x = quarter))+
+  geom_ribbon(aes(ymin = min, ymax = max), fill = "blue", alpha = 0.2)+
+  geom_line(aes(y = med), color = "blue")+
+  facet_wrap( ~ fct_rev(horizon), nrow = 2)+
+  labs(x = "", y = "percent", 
+       title = "German GDP growth: Reuters Poll",
+       subtitle = "median, minimum and maximum forecasts",
+       caption = "Quarter-on-quarter growth rate, forecast horizon h in quarters. Source: Thomson Reuters."
+       )+
+  theme_minimal()
+```
+
+## GDP
+
+Source: [Deutsche Bundesbank, Real-time Database](https://www.bundesbank.de/dynamic/action/en/statistics/time-series-databases/time-series-databases/745590/real-time-data?statisticType=BBK_RTD&treeId=113205500)
+
+```{r}
+series <- "BBKRT.Q.DE.Y.A.AG1.CA010.A.I" # calendar and seasonally adjusted GDP
+df_buba <- getSeries("BBKRT.Q.DE.Y.A.AG1.CA010.A.I")
+```
+function to calculate first release of quarterly GDP growth for a given vintage
+
+```{r}
+calc_first_release <- function(yy, qq, df)
+{
+  vintage_dates <- ymd(colnames(df_buba))
+  ind_vintage <- sum(vintage_dates <= make_date(year = yy, 
+                                                month = 3 * qq, 
+                                                day= 1L)
+                     ) + 1
+  
+  gdp <- df[, ind_vintage]
+  
+  ind_obs <- sum(!is.na(gdp))
+  
+  out <- gdp[ind_obs] / gdp[ind_obs - 1] * 100 - 100 
+  
+  return(out)
+}
+```
+
+loop over years and quarters
+
+```{r}
+df_releases <- data.frame()
+for (yy in yys)
+{
+  for (qq in qqs)
+  {
+      actual <- calc_first_release(yy, qq, df_buba)
+      df_releases <- rbind(df_releases, 
+                           data.frame(quarter = make_date(year = yy, 
+                                                          month = 3 * qq - 2, 
+                                                          day = 1),
+                                      actual = actual)
+                           )
+  }
+}
+    
+```
+
+Merge with forecasts and tidy up
+
+```{r}
+df <- merge(df, df_releases, by = "quarter")
+rm("df_buba", "df_releases")
+```
+
+
+```{r, warning = FALSE, message = FALSE}
+ggplot(df, aes(x = quarter))+
+  geom_line(aes(y = med, color = horizon), size = 1.1)+
+  geom_line(aes(y = actual), color = "black")+
+  geom_point(aes(y = actual), size = 1)+
+  scale_color_npg()+
+  labs(x = "", y = "percent", 
+       title = "German GDP growth: Reuters Poll vs. actual",
+       caption = "Actuals = first release, forecast horizon h in quarters. Source: Thomson Reuters, Deutsche Bundesbank."
+       )+
+  theme_minimal()
+```
+
+
+## Analysis
+
+Calculate forecast error `e`
+
+```{r}
+df$e <- df$med - df$actual
+```
+
+### Optimality of forecasts 
+
+The properties of optimal forecasts are ([Diebold and Lopez, 1995](https://www.nber.org/papers/t0192)):
+
+- forecast errors with mean $0$
+- at most $h-1$ serial correlation in $e$ for $h$-step ahead forecasts
+- variance of forecast errors should be non-decreasing in the horizon
+
+```{r}
+tapply(df$e, df$horizon, mean, na.rm = T)
+```
+
+On the whole, the forecasts are unbiased! 
+
+```{r}
+#tapply(df$e, df$horizon, function(x){round(sqrt(mean(x^2, na.rm = T)), digits = 2)})
+tapply(df$e, df$horizon, var, na.rm = T)
+```
+Variance of the forecast errors is non-decreasing in the horizons
+
+```{r}
+Lmax <- 10 # maximum number of lags in ACF
+tmp <- tapply(df$e, df$horizon, acf, na.action = na.pass, lag.max = Lmax, plot = F)
+df_acf <- data.frame(lag = rep(tmp[[1]]$lag, times = length(tmp)),
+                     horizon = rep(paste0("h = ", seq(-1,2)), each = Lmax + 1),
+                     vals = c(tmp[[1]]$acf, tmp[[2]]$acf, tmp[[3]]$acf, tmp[[4]]$acf)
+                    )
+
+# plot acf function by horizon
+ci <- 0.95 # confidence level 
+Nobs <- nrow(df) / length(unique(df$horizon)) # ignoring NA obs which are not used to calculate ACF
+ggplot(df_acf, aes(x = lag, y = vals, group = horizon, color = horizon))+
+  geom_point()+
+  geom_line()+
+  scale_x_continuous(breaks = seq(0, Lmax, by = 1))+
+  scale_y_continuous(breaks = seq(1, min(df_acf$vals)-0.2, by = -0.1))+
+  geom_hline(yintercept = qnorm((1 + ci)/2)/sqrt(52), size = 0.5, linetype = "dashed")+
+  geom_hline(yintercept = -qnorm((1 + ci)/2)/sqrt(52), size = 0.5, linetype = "dashed")
+```
+
+For $h>-1$ the forecast errors exhibit some first-order serial correlation. 
+
+### Mincer-Zarnowitz regressions
+
+$$y_{t+h} = \alpha + \beta f_{t+h|t} + u_{t+h}, \forall \, t = 1, \dots T$$
+
+The Mincer-Zarnowitz regressions test, whether forecasts are rational. Formally,
+
+$$H_0: \alpha = 0, \beta = 1$$
+
+versus the alternative $H_1: not \, H_0$
+
+
+```{r}
+library(car)
+library(sandwich)
+df_mz <- data.frame()
+for (h_star in levels(df$horizon))
+{
+  tmp_model <- lm(actual ~ med, data = df, subset = df$horizon == h_star)
+  
+  rss_unrestr <- sum(residuals(tmp_model) ^ 2)
+  rss_restr <- sum((tmp_model$model$actual - tmp_model$model$med) ^ 2)
+  q <- 2 # number of restrictions
+  k <- 1 # number of regressors in unrestricted model
+  n <- length(tmp_model$model$med) # this gives the length of the actual regressor used!
+    
+  test_stat <- (rss_restr - rss_unrestr) / q / (rss_unrestr / (n - k - 1))
+  pval <- 1 - pf(test_stat, q, n - k - 1)
+  
+
+  # NW variance-covariance matrix
+  #NW_VCOV <- NeweyWest(lm(actual ~ med, data = df, subset = df$horizon == h_star), 
+  #                    lag = floor(0.75 * n^(1/3)), prewhite = F, 
+  #                    adjust = T)
+  NW_VCOV <- NeweyWest(lm(actual ~ med, data = df, subset = df$horizon == h_star), 
+                      prewhite = FALSE)
+  
+  # HAC SE
+  test_stat_hac <- linearHypothesis(tmp_model, c("(Intercept) = 0", "med = 1"), vcov.=NW_VCOV)[2,3]
+  pval_hac <- linearHypothesis(tmp_model, c("(Intercept) = 0", "med = 1"), vcov.=NW_VCOV)[2,4]
+  
+  # heteroskedasticity-robust F-test
+  #test_stat_het <- linearHypothesis(tmp_model, c("(Intercept) = 0", "med = 1"), white.adjust = "hc1")[2,3]
+  #pval_het <- linearHypothesis(tmp_model, c("(Intercept) = 0", "med = 1"), white.adjust = "hc1")[2,4]
+  
+  
+  df_tmp <- data.frame(horizon = h_star,
+                       alpha = round(coefficients(tmp_model)[1], digits = 2),
+                       beta = round(coefficients(tmp_model)[2], digits = 2),
+                       R2 = round(summary(tmp_model)$r.squared, digits = 2),
+                       n = n,
+                       Fval_hac = round(test_stat_hac, digits = 2),
+                       pval_hac = round(pval_hac, digits = 2)
+                      )
+  rownames(df_tmp) <- NULL
+  df_mz <- rbind(df_mz, df_tmp)
+}
+```
+
+```{r}
+df_mz
+```
+
+There is clear evidence against forecast rationality for the backcasts and 2-step ahead forecasts while this is not the case for nowcasts and 1-step ahead forecasts.
+
+## Sentiment
+
+Load sentiment data, convert `quarter` to date format and standardize values!
+
+```{r}
+df_sentiment <- read.csv(paste0(getwd(), dir_sentiment, fname_sentiment),
+                         stringsAsFactors = F)
+
+df_sentiment$quarter <- as_date(df_sentiment$quarter)
+df_sentiment$sentiment <- scale(df_sentiment$sentiment)
+```
+
+Merge with `df`
+
+```{r}
+df <- merge(df, df_sentiment, by = "quarter")
+rm("df_sentiment")
+```
+
+
+```{r, warning = FALSE, message = FALSE}
+ggplot(df, aes(x = quarter))+
+  geom_line(aes(y = sentiment), color = "blue")+
+  geom_point(aes(y = e))+
+  facet_wrap( ~ fct_rev(horizon), nrow = 2)+
+  labs(x = "", y = "percent/arbritrary units", 
+       title = "Forecast errors vs. sentiment",
+       caption = "Standardized sentiment, forecast horizon h in quarters.")+
+  theme_minimal()
+```
+Plot sentiment against GDP growth.
+
+```{r}
+ggplot(df, aes(x = quarter))+
+  geom_line(aes(y = sentiment), color = "red", size = 1.1)+
+  geom_line(aes(y = actual), color = "black")+
+  geom_point(aes(y = actual), size = 1)+
+  labs(x = "", y = "percent/arbritrary units", 
+       title = "German GDP growth vs. Sentiment",
+       caption = "GDP growth = first release. Source: Deutsche Bundesbank."
+       )+
+  theme_minimal()
+```
+Calculate correlation between GDP growth and sentiment.
+
+```{r}
+cor(df$actual, df$sentiment)
+```
+
+### Augmented Mincer-Zarnowitz regression
+
+$$y_{t+h} = \alpha + \beta f_{t+h|t} + \gamma s_t + u_{t+h}, \forall \, t = 1, \dots T$$
+In this regression:
+- $y_{t+h}$ is the actual GDP growth at time $t+h$,
+- $f_{t+h|t}$ is the professional forecast made at time $t$ (e.g., from Reuters),
+- $s_t$ is the sentiment, calculated based on information available up to $t$.
+
+In this formulation, we test **forecast efficiency** with the null hypothesis 
+
+$$H_0: \alpha = 0, \beta = 1, \gamma = 0$$. 
+
+The **encompassing test** checks whether 
+
+$$\gamma = 0$$, 
+
+testing whether sentiment adds any new information beyond the professional forecast.
+
+**Equivalent regression**: Regressing forecast error on forecast and sentiment
+
+The above regression is equivalent to regressing the **forecast error** on both the forecast and sentiment:
+
+$$ \text{error}_{t+h} = \alpha + \beta f_{t+h|t} + \gamma s_t + u_{t+h} $$.
+
+In this form:
+- **Forecast efficiency** is tested via the null hypothesis $H_0: \alpha = 0, \beta = 0, \gamma = 0$, meaning neither the forecast nor sentiment systematically explains the forecast error.
+- The **encompassing test** is still conducted by testing $\gamma = 0$, determining whether sentiment adds additional information not captured by the forecast.
+
+We adopt the second version, where we regress the forecast error on the forecast and sentiment, following the approach in [Rambacussing and Kwiatkowski (2020, IJoF)](https://www.sciencedirect.com/science/article/abs/pii/S0169207020300595).
+
+```{r}
+library(lmtest)
+df_mz_sentiment <- data.frame()
+for (h_star in levels(df$horizon))
+{
+  tmp_model <- lm(actual - med ~ med + sentiment, data = df, subset = df$horizon == h_star)
+  
+  rss_unrestr <- sum(residuals(tmp_model) ^ 2)
+  rss_restr <- sum((tmp_model$model$`actual - med`) ^ 2)
+  q <- 3 # number of restrictions
+  k <- 2 # number of regressors in unrestricted model
+  # only rows with non-missing values are included
+  n <- nrow(subset(df, df$horizon == h_star & complete.cases(actual, med, sentiment)))
+  
+  # full forecast efficiency  
+  test_stat <- (rss_restr - rss_unrestr) / q / (rss_unrestr / (n - k - 1))
+  pval <- 1 - pf(test_stat, q, n - k - 1)
+  
+  # NW variance-covariance matrix
+  #NW_VCOV <- NeweyWest(lm(actual ~ med + sentiment, data = df, subset = df$horizon == h_star), 
+  #                    lag = floor(0.75 * n^(1/3)), prewhite = F, 
+  #                    adjust = T)
+  NW_VCOV <- NeweyWest(lm(actual-med ~ med + sentiment, data = df, subset = df$horizon == h_star), 
+                       prewhite = FALSE)
+  
+  # HAC SE
+  # full forecast efficiency
+  test_stat_hac <- linearHypothesis(tmp_model, c("(Intercept) = 0", "med = 0", "sentiment = 0"), vcov.=NW_VCOV)[2,3]
+  pval_hac <- linearHypothesis(tmp_model, c("(Intercept) = 0", "med = 0", "sentiment = 0"), vcov.=NW_VCOV)[2,4]
+  
+  # Coefficient on sentiment (gamma)
+  tgamma <- summary(tmp_model)$coefficients[["sentiment", "t value"]]
+  tgamma_hac <- coeftest(tmp_model, vcov = NW_VCOV)[["sentiment", "t value"]]
+  pval_gamma_hac <- coeftest(tmp_model, vcov = NW_VCOV)[["sentiment", "Pr(>|t|)"]]
+  
+  # Intercept (alpha)
+  talpha <- summary(tmp_model)$coefficients[["(Intercept)", "t value"]]
+  talpha_hac <- coeftest(tmp_model, vcov = NW_VCOV)[["(Intercept)", "t value"]]
+  pval_alpha_hac <- coeftest(tmp_model, vcov = NW_VCOV)[["(Intercept)", "Pr(>|t|)"]]
+
+  # Coefficient on med (beta)
+  tbeta <- summary(tmp_model)$coefficients[["med", "t value"]]
+  tbeta_hac <- coeftest(tmp_model, vcov = NW_VCOV)[["med", "t value"]]
+  pval_beta_hac <- coeftest(tmp_model, vcov = NW_VCOV)[["med", "Pr(>|t|)"]]
+  
+  df_tmp <- data.frame(horizon = h_star,
+                   alpha = round(coefficients(tmp_model)[1], digits = 2),
+                   talpha_hac = round(talpha_hac, digits = 2),
+                   pval_alpha_hac = round(pval_alpha_hac, digits = 2),
+                   
+                   beta = round(coefficients(tmp_model)[2], digits = 2),
+                   tbeta_hac = round(tbeta_hac, digits = 2),
+                   pval_beta_hac = round(pval_beta_hac, digits = 2),
+                   
+                   gamma = round(coefficients(tmp_model)[3], digits = 2),
+                   tgamma_hac = round(tgamma_hac, digits = 2),
+                   pval_gamma_hac = round(pval_gamma_hac, digits = 2),
+                   
+                   R2 = round(summary(tmp_model)$r.squared, digits = 2),
+                   n = n,
+                   
+                   Fval_hac = round(test_stat_hac, digits = 2),
+                   pval_hac = round(pval_hac, digits = 2)
+                  )
+  
+   rownames(df_tmp) <- NULL
+   df_mz_sentiment <- rbind(df_mz_sentiment, df_tmp)
+}
+```
+
+```{r}
+df_mz_sentiment
+```
+
+The statistically significant $\gamma$ coefficient indicates that the sentiment provides additional information that can be used to improve the point forecasts for backcasts, as well as for one-step-ahead forecasts. Furthermore, the joint hypothesis that all coefficients $\alpha$, $\beta$, and $\gamma$ are equal to zero is rejected only for the forecast horizons $h=-1$ and $h=1$. This suggests that the professional forecasts are inefficient for these horizons. 
+
+
+Finally, we repeat the analysis for selected sign-adjusted topics. Specifically, we plot forecast errors and GDP growth against each sign-adjusted topic, calculate the correlation between each topic and GDP growth, and conduct the encompassing test for each topic to determine if it can improve point forecasts. The results are compiled and saved in a LaTeX table.
+
+```{r, warning = FALSE, message = FALSE}
+# Load required libraries
+library(knitr)
+library(kableExtra)
+
+# Set directories
+output_dir_1 <- "/plots/errors_vs_sentiment/" 
+output_dir_2 <- "/plots/gdp_vs_sentiment/"
+output_csv <- "correlation_results.csv"  # CSV file to store correlation results
+output_latex <- "encompassing_test.tex"  # File to store LaTeX table
+
+# Define the list of sign-adjusted topic files
+sentiment_files <- c("T11_quarter.csv", "T27_quarter.csv", "T52_quarter.csv", "T74_quarter.csv", 
+                     "T77_quarter.csv", "T81_quarter.csv", "T100_quarter.csv", "T127_quarter.csv", 
+                     "T131_quarter.csv", "T138_quarter.csv")
+
+# Initialize storage for correlations and regression results
+correlation_results <- data.frame()
+regression_results <- data.frame()
+
+# Loop over each file
+for (fname_sentiment in sentiment_files) {
+  
+  # Remove any existing 'sentiment' column from 'df' to avoid duplication
+  if ("sentiment" %in% colnames(df)) {
+    df$sentiment <- NULL
+  }
+  
+  # Load sentiment data and standardize
+  df_sentiment <- read.csv(paste0(getwd(), dir_sentiment, fname_sentiment), stringsAsFactors = FALSE)
+  df_sentiment$quarter <- as.Date(df_sentiment$quarter)
+  df_sentiment$sentiment <- scale(df_sentiment$sentiment)
+
+  # Merge with existing forecast dataframe 'df'
+  df <- merge(df, df_sentiment, by = "quarter")
+
+  # Plot 1: Forecast errors vs. sign-adjusted topic
+  p1 <- ggplot(df, aes(x = quarter)) +
+    geom_line(aes(y = sentiment), color = "blue") +
+    geom_point(aes(y = e)) +
+    facet_wrap(~ fct_rev(horizon), nrow = 2) +
+    labs(x = "", y = "percent/arbritrary units",
+         title = paste("Forecast errors vs. sign-adjusted topic for", gsub("_quarter.csv", "", fname_sentiment)),
+         caption = "Standardized sign-adjusted topic, forecast horizon h in quarters.") +
+    theme_minimal()
+  # Save plot
+  ggsave(filename = paste0(getwd(), output_dir_1, gsub("_quarter.csv", "", fname_sentiment), "_errors_vs_topic.png"), plot = p1)
+  
+  # Plot 2: GDP growth vs. sign-adjusted topic
+  p2 <- ggplot(df, aes(x = quarter)) +
+    geom_line(aes(y = sentiment), color = "red", size = 1.1) +
+    geom_line(aes(y = actual), color = "black") +
+    geom_point(aes(y = actual), size = 1) +
+    labs(x = "", y = "percent/arbritrary units",
+         title = paste("German GDP growth vs. Sign-adjusted topic for", gsub("_quarter.csv", "", fname_sentiment)),
+         caption = "GDP growth = first release. Source: Deutsche Bundesbank.") +
+    theme_minimal()
+  # Save plot
+  ggsave(filename = paste0(getwd(), output_dir_2, gsub("_quarter.csv", "", fname_sentiment), "_gdp_vs_topic.png"), plot = p2)
+  
+   # Calculate and store correlation between GDP growth and sign-adjusted topic
+  corr_value <- cor(df$actual, df$sentiment, use = "complete.obs")
+  correlation_results <- rbind(correlation_results, data.frame(Topic = gsub("_quarter.csv", "", fname_sentiment),   Correlation = round(corr_value, 2)))
+
+  # Regression analysis: Loop over horizons
+  df_mz_sentiment <- data.frame()
+  for (h_star in levels(df$horizon)) {
+    
+    # Run regression
+    tmp_model <- lm(actual - med ~ med + sentiment, data = df, subset = df$horizon == h_star)
+    
+    # Calculate Newey-West standard errors
+    NW_VCOV <- NeweyWest(tmp_model, prewhite = FALSE)
+
+    # Joint hypothesis test for efficiency
+    test_stat_hac <- linearHypothesis(tmp_model, c("(Intercept) = 0", "med = 0", "sentiment = 0"), vcov. = NW_VCOV)[2, 3]
+    pval_hac <- linearHypothesis(tmp_model, c("(Intercept) = 0", "med = 0", "sentiment = 0"), vcov. = NW_VCOV)[2, 4]
+
+    # Extract coefficients
+    alpha <- coefficients(tmp_model)[1]
+    beta <- coefficients(tmp_model)[2]
+    gamma <- coefficients(tmp_model)[3]
+    
+    # HAC SE
+    talpha_hac <- coeftest(tmp_model, vcov = NW_VCOV)[["(Intercept)", "t value"]]
+    pval_alpha_hac <- coeftest(tmp_model, vcov = NW_VCOV)[["(Intercept)", "Pr(>|t|)"]]
+
+    tbeta_hac <- coeftest(tmp_model, vcov = NW_VCOV)[["med", "t value"]]
+    pval_beta_hac <- coeftest(tmp_model, vcov = NW_VCOV)[["med", "Pr(>|t|)"]]
+
+    tgamma_hac <- coeftest(tmp_model, vcov = NW_VCOV)[["sentiment", "t value"]]
+    pval_gamma_hac <- coeftest(tmp_model, vcov = NW_VCOV)[["sentiment", "Pr(>|t|)"]]
+
+    # Store results in a temporary data frame
+    df_tmp <- data.frame(horizon = h_star,
+                         alpha = round(alpha, digits = 2),
+                         talpha_hac = round(talpha_hac, digits = 2),
+                         pval_alpha_hac = pval_alpha_hac,
+                         beta = round(beta, digits = 2),
+                         tbeta_hac = round(tbeta_hac, digits = 2),
+                         pval_beta_hac = pval_beta_hac,
+                         gamma = round(gamma, digits = 2),
+                         tgamma_hac = round(tgamma_hac, digits = 2),
+                         pval_gamma_hac = pval_gamma_hac,
+                         topic = gsub("_quarter.csv", "", fname_sentiment)
+                         )
+    df_mz_sentiment <- rbind(df_mz_sentiment, df_tmp)
+  }
+
+  # Add the results for this sign-adjusted topic to the overall results
+  regression_results <- rbind(regression_results, df_mz_sentiment)
+
+  # Remove the topic data to avoid merging issues in the next iteration
+  rm("df_sentiment")
+}
+
+# Save correlation results to CSV
+write.csv(correlation_results, file = output_csv, row.names = FALSE)
+
+# Create the formatted table as a data frame
+formatted_table <- regression_results %>%
+  # Add significance stars to each coefficient
+  mutate(Significance = ifelse(pval_alpha_hac < 0.01, "***", ifelse(pval_alpha_hac < 0.05, "**", ifelse(pval_alpha_hac < 0.1, "*", "")))) %>%
+  mutate(Intercept = paste0(round(alpha, 2), Significance)) %>%
+  mutate(Significance = ifelse(pval_beta_hac < 0.01, "***", ifelse(pval_beta_hac < 0.05, "**", ifelse(pval_beta_hac < 0.1, "*", "")))) %>%
+  mutate(SPF = paste0(round(beta, 2), Significance)) %>%
+  mutate(Significance = ifelse(pval_gamma_hac < 0.01, "***", ifelse(pval_gamma_hac < 0.05, "**", ifelse(pval_gamma_hac < 0.1, "*", "")))) %>%
+  mutate(Topic = paste0(round(gamma, 2), Significance)) %>%
+  
+  # Gather coefficients into a single "Regressor" column
+  pivot_longer(cols = c(Intercept, SPF, Topic), names_to = "Regressor", values_to = "Value") %>%
+  
+  # Create a unique label combining `horizon` and `Regressor`
+  mutate(Horizon_Regressor = paste(horizon, Regressor, sep = "_")) %>%
+  
+  # Pivot to wide format using `topic` as the new columns
+  select(Horizon_Regressor, topic, Value) %>%
+  pivot_wider(names_from = topic, values_from = Value) %>%
+  
+  # Separate `Horizon_Regressor` back into `horizon` and `Regressor`
+  separate(Horizon_Regressor, into = c("horizon", "Regressor"), sep = "_") %>%
+  
+  # Arrange by `horizon` and then `Regressor` in the desired order
+  arrange(factor(horizon, levels = unique(horizon)), factor(Regressor, levels = c("Intercept", "SPF", "Topic")))
+
+# Create the LaTeX table with grouping
+latex_output <- formatted_table %>%
+  kable(format = "latex", booktabs = TRUE, linesep = "\\addlinespace[0.3em]", escape = FALSE) %>%
+  kable_styling(font_size = 8, latex_options = c("hold_position")) 
+
+# Save to LaTeX file
+write(latex_output, file = output_latex)
+```
+

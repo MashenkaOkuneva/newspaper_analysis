@@ -13,6 +13,7 @@ __pycache__/
 !/forecasting/DFM/data/correlations/*.csv
 !/forecasting/DFM/data/average_correlation_selected_topics.csv
 !/forecasting/reuters-poll-eval/sentiment/*.csv
+!/forecasting/reuters-poll-eval/correlation_results.csv
 *.eps
 *.xlsx
 # Exceptions:
