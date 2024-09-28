@@ -45,6 +45,7 @@ __pycache__/
 /MediaTenor_processing/MediaTenor_LexisNexis_Factiva/WamS_Konjunktur_rtf/*
 /MediaTenor_processing/MediaTenor_LexisNexis_Factiva/WamS_Konjunktur_txt/*
 /sentiment/MediaTenor_data/*
+/forecasting/reuters-poll-eval/poll data/*
 
 # Keep the directories
 !/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BamS_Konjunktur_rtf/.gitkeep
@@ -69,3 +70,4 @@ __pycache__/
 !/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/WamS_Konjunktur_rtf/.gitkeep
 !/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/WamS_Konjunktur_txt/.gitkeep
 !/sentiment/MediaTenor_data/.gitkeep
+!/forecasting/reuters-poll-eval/poll data/.gitkeep
