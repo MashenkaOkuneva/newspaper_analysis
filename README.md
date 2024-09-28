@@ -68,7 +68,7 @@ The repository is organized into several folders, each dedicated to a specific p
     - **[nb_reuterspoll_sentiment.Rmd](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/reuters-poll-eval/nb_reuterspoll_sentiment.Rmd)**: Produces the main analysis by evaluating the Reuters Poll forecasts and conducting encompassing tests for sentiment and daily sign-adjusted topics.
     - **[professional_forecasts.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/reuters-poll-eval/professional_forecasts.R)**: Creates Reuters poll forecasts for 2010-2018 and different forecasting horizons (backcasts, nowcasts, 1-step-ahead, and 2-step-ahead forecasts).
     - **[fe_professional.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/reuters-poll-eval/fe_professional.R)**: Calculates forecast errors for the Reuters poll forecasts of GDP growth.
-    - **[forecasts_plot_professional.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/reuters-poll-eval/forecasts_plot_professional.R)**: Creates plots comparing the Reuters forecasts against the actual values of annualized GDP growth.
+    - **[forecasts_professional_plot.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/reuters-poll-eval/forecasts_professional_plot.R)**: Creates plots comparing the Reuters forecasts against the actual values of annualized GDP growth.
 
 ## Project Environment Setup
 
