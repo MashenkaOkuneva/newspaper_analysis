@@ -1,5 +1,7 @@
 .ipynb_checkpoints
 __pycache__/
+# R history files
+.Rhistory
 
 /word_embeddings/news_word2vec.txt
 
