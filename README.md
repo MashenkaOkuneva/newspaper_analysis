@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository contains the necessary resources to replicate the main results from the paper "Nowcasting German GDP with Text Data" by Mariia Okuneva, Philipp Hauber, Kai Carstensen, and Jasper Bär. It includes the code for sentiment extraction, topic modeling, and out-of-sample forecasting exercise.
+This repository contains the necessary resources to replicate the main results from the paper "Nowcasting German GDP with Text Data" by Mariia Okuneva, Philipp Hauber, Kai Carstensen, and Jasper Bär. It includes the code for sentiment extraction, topic modeling, encompassing tests, and out-of-sample forecasting exercise.
 
 ## Repository Structure
 
