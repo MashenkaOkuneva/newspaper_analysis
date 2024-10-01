@@ -1,3 +1,9 @@
+# This script calculates the correlations between sign-adjusted topics and annualized quarterly GDP growth 
+# for each data vintage from 2010Q1 to 2018Q2. It pre-processes the daily sign-adjusted topics using 
+# moving averages and biweight filtering before calculating correlations. The script outputs CSV files 
+# containing the top 20 topics with the highest absolute correlations for each vintage. All resulting CSV 
+# files are saved in the folder "correlations".
+
 rm(list = ls())
 
 # PACKAGES ----

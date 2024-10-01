@@ -11,6 +11,8 @@ __pycache__/
 !/topics/topic_description.csv
 !/topics/sign_adjusted_daily_topics_format.csv
 !/forecasting/DFM/data/correlations/*.csv
+!/forecasting_60days/DFM/data/correlations/*.csv
+!/forecasting_90days/DFM/data/correlations/*.csv
 !/forecasting/DFM/data/average_correlation_selected_topics.csv
 !/forecasting/reuters-poll-eval/sentiment/*.csv
 !/forecasting/reuters-poll-eval/correlation_results.csv

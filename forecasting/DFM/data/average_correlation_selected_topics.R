@@ -1,3 +1,9 @@
+# This script calculates the average correlation across data vintages for a set of selected sign-adjusted 
+# topics used in the out-of-sample forecasting experiment. It reads in the correlation CSV files from the 
+# "correlations" folder, sums the correlations for each selected topic across all vintages, and then 
+# computes the average correlation for each topic. The resulting average correlations are saved in the 
+# "average_correlation_selected_topics.csv" file.
+
 # Load necessary libraries
 library(readr)
 library(dplyr)

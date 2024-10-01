@@ -1,3 +1,9 @@
+# This script identifies how frequently each topic appeared among the top 10 topics 
+# most correlated with GDP growth across different data vintages. It reads in the 
+# correlation CSV files from the "correlations" folder, extracts the top 10 topics 
+# from each vintage, and then counts the frequency of each topic's appearance. 
+# The results are displayed as a sorted table of topic counts.
+
 # Load necessary libraries
 library(readr)
 library(dplyr)
