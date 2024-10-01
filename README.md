@@ -70,6 +70,13 @@ The repository is organized into several folders, each dedicated to a specific p
     - **[fe_professional.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/reuters-poll-eval/fe_professional.R)**: Calculates forecast errors for the Reuters poll forecasts of GDP growth.
     - **[forecasts_professional_plot.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/reuters-poll-eval/forecasts_professional_plot.R)**: Creates plots comparing the Reuters forecasts against the actual values of annualized GDP growth.
 
+  - **[AR1]**: This folder contains R and MATLAB scripts for generating AR(1) forecasts of annualized GDP growth for Germany.
+    - **[vintages_AR1.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/AR1/vintages_AR1.R)**: Generates 34 vintages of real-time GDP growth data, covering the period from 2010Q1 to 2018Q2.    
+    - **[AR1_expanding_direct_vintages.m](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/AR1/AR1_expanding_direct_vintages.m)**: Generates direct multi-step AR(1) forecasts of GDP growth, including backcasts, nowcasts, 1-step-ahead, and 2-step-ahead forecasts.
+    - **[fe_ar1.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/AR1/fe_ar1.R)**: Creates forecast errors for all forecasting horizons based on the AR(1) forecasts.
+    - **[forecasts_ar1_plot.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/AR1/forecasts_ar1_plot.R)**: Creates plots of AR(1) forecasts for all forecasting horizons compared to the actual GDP growth.
+    - **[true_gdp_growth_AR1_first_release.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/AR1/true_gdp_growth_AR1_first_release.R)**: Constructs a series of first-release annualized quarterly GDP growth rates based on real-time data vintages.
+
 ## Project Environment Setup
 
 ### Python Versions and Environment Setup

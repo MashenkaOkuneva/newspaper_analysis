@@ -14,6 +14,8 @@ __pycache__/
 !/forecasting/DFM/data/average_correlation_selected_topics.csv
 !/forecasting/reuters-poll-eval/sentiment/*.csv
 !/forecasting/reuters-poll-eval/correlation_results.csv
+!/forecasting/AR1/*.csv
+!/forecasting/AR1/vintages_AR1/*.csv
 *.eps
 *.xlsx
 # Exceptions:
