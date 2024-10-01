@@ -16,6 +16,7 @@ __pycache__/
 !/forecasting/reuters-poll-eval/correlation_results.csv
 !/forecasting/AR1/*.csv
 !/forecasting/AR1/vintages_AR1/*.csv
+
 *.eps
 *.xlsx
 # Exceptions:
@@ -26,6 +27,9 @@ __pycache__/
 *.sav
 *.pyc
 *.pkl
+# Unnecessary pdf files
+/forecasting_60days/reuters-poll-eval/*.pdf
+/forecasting_90days/reuters-poll-eval/*.pdf
 
 # Ignore all files within specific directories
 /MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BamS_Konjunktur_rtf/*
@@ -51,6 +55,8 @@ __pycache__/
 /MediaTenor_processing/MediaTenor_LexisNexis_Factiva/WamS_Konjunktur_txt/*
 /sentiment/MediaTenor_data/*
 /forecasting/reuters-poll-eval/poll data/*
+/forecasting_60days/reuters-poll-eval/poll data/*
+/forecasting_90days/reuters-poll-eval/poll data/*
 
 # Keep the directories
 !/MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BamS_Konjunktur_rtf/.gitkeep
