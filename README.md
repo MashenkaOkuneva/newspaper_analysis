@@ -77,6 +77,9 @@ The repository is organized into several folders, each dedicated to a specific p
     - **[forecasts_ar1_plot.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/AR1/forecasts_ar1_plot.R)**: Creates plots of AR(1) forecasts for all forecasting horizons compared to the actual GDP growth.
     - **[true_gdp_growth_AR1_first_release.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/AR1/true_gdp_growth_AR1_first_release.R)**: Constructs a series of first-release annualized quarterly GDP growth rates based on real-time data vintages.
 
+  - **[DFM](https://github.com/MashenkaOkuneva/newspaper_analysis/tree/main/forecasting/DFM)**: This folder contains MATLAB scripts for producing forecasts of annualized GDP growth for Germany using a Dynamic Factor Model (DFM), mixing daily, monthly, and quarterly data. It also includes R scripts for preparing real-time data vintages and an R notebook demonstrating the transformation of daily sign-adjusted topics for estimation. The code was originally written by Philipp Hauber. If you are interested only in this specific part of the analysis, please refer to the original repository: [nowcasting-topics](https://github.com/philippotto-hauber/nowcasting-topics/tree/main).
+    - **[nb_transform_topics.Rmd](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/DFM/data/nb_transform_topics.Rmd)**: Shows how daily sign-adjusted topics were pre-processed before estimating the DFM using the full sample period (1991-2018). Additionally, it computes principal component estimates of these transformed series. Finally, it explores the correlations between the sign-adjusted topics and quarterly GDP growth.
+
 ## Project Environment Setup
 
 ### Python Versions and Environment Setup

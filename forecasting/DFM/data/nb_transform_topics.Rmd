@@ -1,0 +1,458 @@
+---
+title: "Analyzing topics"
+output:
+  html_document:
+    df_print: paged
+  'html_notebook:': default
+  html_notebook: default
+---
+
+This notebook illustrates how we transform the raw daily time series of sign-adjusted topics before estimating the daily factor model. Additionally, it also calculates principal component estimates of transformed series and analyzes their correlation with quarterly GDP.  
+
+```{r echo=T, message = FALSE, warning = FALSE}
+rm(list = ls())
+library(ggplot2)
+library(lubridate)
+library(dplyr)
+library(tidyr)
+library(fredmdr)
+library(bundesbank)
+library(tibble)
+library(ggsci)
+```
+
+
+## Load topics
+
+```{r}
+df_raw <- read.csv("./topics/sign_adjusted_daily_topics_format.csv")
+
+# add date and weekday variable
+df_raw %>%
+  mutate(date = make_date(year = df_raw$year, 
+                         month = df_raw$month, 
+                         day = df_raw$day),
+         weekday = wday(date, label = T),
+         quarter = ceiling(month / 3)) %>% 
+  select(year, quarter, month, day, weekday, date, everything()) -> df_topics 
+
+# get rid of raw df
+rm(df_raw)
+
+# inspect first rows of df_topics
+head(df_topics)
+```
+
+The earlier version of the analysis, which only used the SZ dataset, had missing days for Sundays and bank holidays when no newspapers were published (e.g., Twelfth Night or 6.1.1994). This required consideration of different modeling approaches:
+
+1) Formulating the model at the daily frequency with `NA` for Sundays and bank holidays
+2) Formulating the model at the weekdaily frequency with `NA` for bank holidays
+3) Formulating the model under the assumption that a week contains six days with `NA` for bank holidays
+
+However, with the inclusion of the dpa dataset, there are no missing days, and we now have a complete daily time series, making these considerations obsolete. The transformations are performed on the complete dataset without any gaps. 
+
+## Preprocessing and transformations
+
+The following plot shows a representative sign-adjusted topic series. It is extremely noisy and characterized by a slow-moving trend (but not necessarily linear!). In this section, we illustrate how to adjust the series in order to estimate the factor model at the daily frequency. 
+
+```{r}
+ggplot(df_topics, aes(x = date, y = T100))+geom_line(alpha = 0.5)
+```
+
+Before proceeding, we standardize the original topics. This should not have any impact on the smoothing or de-trending. It merely ensures that the original series and the final (de-trended) series are on the same scale. Note, however, that this implies that the final series will in general not have unit standard deviation. When preparing the data for the estimation, smoothing and de-trending can be performed on the original data and the resulting final series is standardized. 
+
+```{r}
+# select only sign-adjusted topics
+dat_orig <- select(df_topics, -year, -quarter, -month, -day, -date, -weekday) 
+
+# standardize
+dat <- scale(dat_orig)
+```
+
+
+### Removing outlier
+
+In line with the nowcasting/forecasting literature, we define outlier as those observations that are more than 10 interquartiles ranges from the median. Note that this is a very conservative definition! 
+
+```{r}
+dt_outl <- function(y, aalpha)
+{
+  return(abs((y - median(y, na.rm = T))) > aalpha * IQR(y, na.rm = T))
+}
+
+ind_outl <- apply(dat, c(2), dt_outl, aalpha = 10)
+
+# number of outliers?
+sum(ind_outl)
+```
+
+In total, there are `r sum(ind_outl)` observations classified as outlier. Set these to `NA`. These missing values will be overwritten, when we smooth the series and de-trend them. Therefore we should reimpose the pattern of `NA` obtained at this stage and not use observations that were originally classified as outlier. 
+
+```{r}
+dat_rmoutl <- dat
+dat_rmoutl[ind_outl] <- NA
+```
+
+Visualize series with the most outliers
+```{r}
+i <- which.max(apply(ind_outl, c(2), sum))
+tmp <- array(NA, nrow(dat))
+tmp[ind_outl[, i]] <- dat[ind_outl[, i], i]
+
+df_plot <- data.frame(date = df_topics$date, 
+                      y_nooutl = dat[, i],
+                      y_outl = tmp)
+
+ggplot(df_plot)+
+  geom_line(aes(x = date, y = y_nooutl), col = "royalblue3")+
+  geom_point(aes(x = date, y = y_outl), col = "royalblue3")
+
+rm(df_plot, i, tmp)
+```
+
+### Smoothing the raw topics
+
+To smooth the topics, we calculate a 60-day backward looking moving average. 
+
+`rollmean` function that calculates the recursive $K$-th order rolling mean, i.e. $\hat{y}_t = \frac{1}{K} \sum_{k=0}^K y_{t-k}$. Allows for `NA` in the series. 
+```{r}
+rollmean <- function(x, k){
+  xroll <- array(NA, c(length(x)))
+  for (t in seq(k, length(x)))
+    xroll[t] <- mean(x[(t-k+1):t], na.rm = TRUE)
+  
+  return(xroll)
+}
+```
+
+
+```{r}
+# moving average
+K <- 60
+dat_ma <- apply(dat_rmoutl, c(2), rollmean, k = K)
+```
+
+### Removing trends
+
+`bw_filter` function that calculates the bi-weight filter as in [Stock and Watson (2012)](https://www.princeton.edu/~mwatson/papers/Stock_Watson_Disentangling_BPEA_2012.pdf) and [Stock and Watson (2016)](https://www.princeton.edu/~mwatson/papers/Stock_Watson_DFM_HOM_030916.pdf). This removes long-run trends in the series but is more flexible than a linear time trend. While in principle two-sided, the filter becomes increasingly one-sided when approaching the endpoints. The function allows for `NA` in the series but only at the beginning!  
+```{r}
+bw_filter <- function(y, bw)
+{
+  # compute un-normalized weights
+  j <- seq(-bw, bw, 1) 
+  omeg = (1 - (j/bw) ^ 2) ^ 2  
+  
+  # check for NA's in y
+  n_NA <- sum(is.na(y)) 
+  y_noNA <- y[(n_NA + 1) : length(y)]
+  Nt <- length(y_noNA)
+  
+  # loop over t
+  tau <- mat.or.vec(length(y_noNA), 1)
+  for (t in 1 : length(y_noNA)) {
+    # case distinction
+    if (t <= bw) {
+      
+      indY <- c(1 : (2 * bw - (bw - t)))
+      indOmeg <- c((bw - t + 2):(2 * bw + 1)) 
+      kap <- 1 / ( sum(omeg[indOmeg]))
+      tau[ t ] <- kap * omeg[indOmeg] %*% y_noNA[indY] 
+      
+    } else if (t > (Nt - bw)) {
+      
+      indY <- c((t - bw) : Nt)
+      indOmeg <- c(1 : (bw + 1 + (Nt - t)))
+      kap <- 1 / ( sum( omeg[indOmeg] ) )
+      tau[t] <- kap * omeg[indOmeg] %*% y_noNA[indY] 
+      
+    } else {
+      
+      indY <- seq(t - bw, t + bw, 1)
+      indOmeg <- c( 1 : (2 * bw + 1))
+      kap <- 1 / (sum(omeg[indOmeg]))
+      tau[t] <- kap * omeg[indOmeg] %*% y_noNA[indY]  
+    }
+  }
+  return(c(rep(NA, times = n_NA), tau))
+}
+```
+
+
+```{r}
+# bi-weight filter
+dat_bw <- apply(dat_ma, c(2), bw_filter, bw = 600)
+
+# de-trended topics
+dat_trafo <- dat_ma - dat_bw
+```
+
+### Plot selected topics
+
+```{r}
+df_orig <- as.data.frame(dat_rmoutl)
+df_orig$date <- df_topics$date
+df_orig %>% 
+  pivot_longer(cols = -date, names_to = "topics", values_to = "vals") %>%
+  mutate(series = "original") -> df_orig
+
+df_trafo <- as.data.frame(dat_trafo)
+df_trafo$date <- df_topics$date
+df_trafo %>% 
+  pivot_longer(cols = -date, names_to = "topics", values_to = "vals") %>%
+  mutate(series = "final") -> df_trafo
+
+df_ma <- as.data.frame(dat_ma)
+df_ma$date <- df_topics$date
+df_ma %>% 
+  pivot_longer(cols = -date, names_to = "topics", values_to = "vals") %>%
+  mutate(series = "smoothed") -> df_ma
+
+df_bw <- as.data.frame(dat_bw)
+df_bw$date <- df_topics$date
+df_bw %>% 
+  pivot_longer(cols = -date, names_to = "topics", values_to = "vals") %>%
+  mutate(series = "filtered") -> df_bw
+
+# merge into one df
+df_plot <- rbind(df_ma, df_bw)
+df_plot <- rbind(df_plot, df_orig)
+df_plot <- rbind(df_plot, df_trafo)
+
+# rm df's
+rm(df_ma, df_bw, df_orig, df_trafo)
+
+# convert series to factor and reorder levels
+df_plot$series <- as.factor(df_plot$series)
+df_plot$series = factor(df_plot$series,levels(df_plot$series)[c(3, 4, 1, 2)])
+```
+
+```{r}
+# plot
+ylim_uppr <- 3
+ylim_lowr <- -ylim_uppr
+
+ggplot(filter(df_plot, topics %in% c("T0", "T1", "T3", "T4", "T5", "T11")), 
+       aes(x = date, y = vals, 
+           group = series, 
+           col = series, 
+           linetype = series,
+           alpha = series
+           )
+       )+
+  geom_line()+
+  scale_color_manual(name = element_blank(), 
+                     values = c("filtered" = "blue4", 
+                                "smoothed" = "blue4",
+                                "original" = "gray80",
+                                "final" = "darkorange3"))+
+  scale_linetype_manual(name = element_blank(), 
+                        values = c("filtered" = "dotted", 
+                                   "smoothed" = "solid", 
+                                   "original" = "solid",
+                                   "final" = "solid"))+
+  scale_alpha_manual(name = element_blank(),
+                     guide = 'none',
+                     values = c("filtered" = 1, 
+                                "smoothed" = 1, 
+                                "original" = 0.4,
+                                "final" = 1))+
+  labs(x = "", y = "", 
+       title = "Transformation of topics series",
+       caption = paste0("smoothed = 60 day trailing moving average, filtered = biweight filter with bandwidth 600, final = smoothed minus filtered series.\nNote that the range of the y-axes is restricted to [", ylim_lowr, ", ", ylim_uppr, "] for better visibility of the smoothed and detrended series."))+
+  scale_x_date(date_breaks = "5 years", date_labels = "%Y")+
+  scale_y_continuous(breaks = seq(ylim_lowr, ylim_uppr, by = 1), limits = c(ylim_lowr, ylim_uppr))+
+  facet_wrap(~ topics , ncol = 2)+
+  theme_minimal()+
+  theme(legend.position = "top", 
+        panel.grid.minor = element_blank(),
+        #panel.grid.major = element_blank(),
+        plot.caption = element_text(size = 7))  
+```
+
+Save plot as pdf
+```{r}
+ggsave(filename = "./topics_trafos.pdf", width = 20, height = 15, units = "cm")
+```
+
+## Analysis of the transformed series
+
+### Plot all transformed time series
+
+```{r}
+stepsize <- 2
+pdf(file="plot_all_trafo_topic.pdf", paper = "a4r", width = 10, height = 8)  
+for (i in seq(1, ncol(dat_trafo), by = stepsize))
+{
+  matplot(df_topics$date, scale(dat_trafo[, i:(i+(stepsize-1))]), 
+          type = "l", main = paste0("T", i-1, " to ", i+(stepsize-2)), # topics start counting at 0!!!! 
+          col = c("cornflowerblue", "darkorange1", "darkorchid3"),
+          ylab = "", xlab = "", lty = rep(1, stepsize))
+  legend("topright", 
+       legend = paste0("T", seq(i-1, i+(stepsize-2))), # topics start counting at 0!!!! 
+       col = c("cornflowerblue", "darkorange1", "darkorchid3"),
+       lty= rep(1, stepsize), cex= 1, box.lty = 0, y.intersp=2, bg="transparent")
+}
+
+dev.off()
+```
+
+### Principal components of (transformed) sign-adjusted topics
+
+Reimpose pattern original pattern of missings
+```{r}
+dat_pca <- dat_trafo 
+dat_pca[ind_outl] <- NA
+```
+
+Drop some topics
+```{r}
+dat_pca <- dat_pca[, -c(6), drop = F]
+```
+
+Calculate eigenvalues and plot cumulative share of explained variance
+
+```{r}
+eigvals_pca <- eigen(cor(dat_pca, use = "complete.obs"), only.values = T)
+plot(seq(1, length(eigvals_pca$values)), 
+     cumsum(eigvals_pca$values) / sum(eigvals_pca$values),
+     xlab = "eigenvalue", ylab = "share of explained variance",
+     main = "eigenvalue decomposition of dat_pca")
+```
+PCA based on EM algorithm following Stock and Watson (2002). Manually set number of factors to 10!
+```{r}
+pca <- f_emalg(scale(dat_pca), Nr_max = 10, Niter = 50, ic = "none",  print_iter = TRUE)
+```
+Plot PCs
+```{r}
+cols <- rep(c("cornflowerblue", 
+              "darkorange1", 
+              "darkorchid3", 
+              "darkolivegreen4", 
+              "brown"), times = 2)
+ltys <- rep(c(1, 2), each = 5)
+pdf(file="plot_pc_trafo.pdf", paper = "a4r", width = 10, height = 8)
+matplot(df_topics$date, pca$f, 
+        type = "l", lty = ltys, col = cols, 
+        main = "First 10 principal components of transformed topics",
+        ylab = "", xlab = "")
+legend(as.Date("2004-01-01"), 2.0, 
+       legend = paste0("PC", seq(1, 10)), 
+       col = cols,
+       lty= ltys, cex= 1, box.lty = 0, y.intersp=2, bg="transparent", ncol = 5)
+dev.off()
+```
+Clean up workspace!
+```{r}
+rm(eigvals_pca, dat_pca, pca)
+```
+
+
+### Correlation analysis
+
+#### Correlation between transformed topics
+
+Calculate the correlation between the transformed sign-adjusted topics
+```{r}
+cor_trafo <- cor(dat_trafo, use = "complete.obs")
+cor_trafo_vec <- cor_trafo[lower.tri(cor_trafo)]
+hist(cor_trafo_vec, breaks = 100)
+```
+#### Correlation with quarterly GDP growth
+
+Aggregate transformed sign-adjusted topics to quarterly frequency
+
+```{r}
+df_trafo <- cbind(df_topics[, 1:4], as.data.frame(dat_trafo))
+
+df_trafo %>% 
+  pivot_longer(cols = -c(year, quarter, month, day), 
+               names_to = "topic", 
+               values_to = "vals") %>%
+  group_by(topic, year, quarter) %>%
+  summarise(avg_vals = mean(vals, na.rm = T)) %>%
+  pivot_wider(id_cols = c(year, quarter), 
+              names_from = topic, 
+              values_from = avg_vals) -> df_trafo_Q
+```
+
+
+```{r}
+series <- "BBKRT.Q.DE.Y.A.AG1.CA010.A.I" 
+df_gdp <- getSeries("BBKRT.Q.DE.Y.A.AG1.CA010.A.I") # calendar and seasonally adjusted GDP
+
+# select last vintage and convert dates to column
+df_gdp %>% 
+  select(tail(names(.), 1)) %>%
+  rownames_to_column(var = "date") %>%
+  mutate(year = as.numeric(substr(date, 1, 4)), 
+         month = as.numeric(substr(date, 6, 7)) + 1,  
+         quarter = ceiling(month/3),
+         date = make_date(year = year, month = month, day = 15) # middle of the quarter, e.g. 15.2. for Q1
+         )-> df_gdp
+
+# adjust name of series
+names(df_gdp)[2] <- "gdp"
+
+# calculate annualized quarterly growth rate
+df_gdp$d_gdp <- c(NA, 400 * diff(log(df_gdp$gdp)))
+
+# filter to match sample of transformed topics
+df_gdp <- df_gdp[df_gdp$year >= 1991 & df_gdp$year <= 2018, ]
+```
+
+
+Calculate correlation between topics and GDP
+
+```{r}
+cor_topics_gdp <- cor(cbind(as.matrix(df_trafo_Q[, -c(1:2)]), df_gdp$d_gdp), use = "complete.obs")
+
+# last row contains correlations of topics with GDP growth
+cor_topics_gdp <- cor_topics_gdp[nrow(cor_topics_gdp), 1:(ncol(cor_topics_gdp) - 1)] 
+
+# histogram
+hist(cor_topics_gdp, breaks = 20)
+             
+# sort topics
+as.data.frame(cor_topics_gdp) %>% 
+  rownames_to_column(var = "topic") %>%
+  mutate(abs_cor = abs(cor_topics_gdp)) %>%
+  arrange(desc(abs_cor)) %>%
+  head(10)
+```
+Plot 5 topics with the highest correlation 
+
+```{r}
+# sort by absolute correlation
+top_topics <- sort(abs(cor_topics_gdp), decreasing = TRUE)
+high_corr_topics <- names(top_topics[1:5])
+
+#high_corr_topics <- c("T10", "T0", "T44", "T36", "T21") # automate!
+
+cbind(data.frame(date = df_topics$date), scale(dat_trafo))  %>% 
+  pivot_longer(cols = -date, names_to = "topic", values_to = "vals") %>%
+  filter(topic %in% high_corr_topics) %>% 
+  filter(date >= "1991-01-01" & date <= "2018-12-31") -> df_plot_topics
+
+df_gdp %>% 
+  mutate(d_gdp_stand = (d_gdp - mean(d_gdp, na.rm = T)) / sd(d_gdp, na.rm = T)) %>%
+  filter(date >= "1991-01-01" & date <= "2018-12-31") -> df_plot_gdp
+
+ggplot()+
+  geom_line(mapping = aes(x = date, y = vals, group = topic, color = topic), 
+            data = df_plot_topics, alpha = 0.5)+
+  geom_point(mapping = aes(x = date, y = d_gdp_stand), 
+             data = df_plot_gdp, size = 1, col = "black")+
+  scale_color_jco(name = element_blank())+
+  scale_x_date(date_breaks = "5 years", date_labels = "%Y")+
+  labs(y = "standard deviation", x = "", title = "Transformed topics and economic activity",
+       subtitles = "5 topics with the highest absolute correlation between annualized quarterly GDP growth",
+       caption = "All series have been standardized. Note that the quarterly observations are placed in the middle of each quarter, e.g. February 15th for Q1.")+
+  theme(legend.position = "bottom",
+        plot.caption = element_text(size = 7))  
+```
+
+Save plot
+```{r}
+ggsave(filename = "plot_highcorr_topics_gdp.pdf", width = 20, height = 15, units = "cm")
+```
+
