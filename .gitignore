@@ -20,6 +20,7 @@ __pycache__/
 !/forecasting/AR1/vintages_AR1/*.csv
 !/forecasting/DFM/data/*.csv
 !/forecasting/DFM/data/vintages/*.csv
+!/forecasting/DFM/data/topics/*.csv
 !/forecasting/DFM/model/*.csv
 !/forecasting/hard_data/vintages_hard/*.csv
 !/forecasting/hard_data/vintages_both/*.csv
