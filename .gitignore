@@ -18,6 +18,12 @@ __pycache__/
 !/forecasting/reuters-poll-eval/correlation_results.csv
 !/forecasting/AR1/*.csv
 !/forecasting/AR1/vintages_AR1/*.csv
+!/forecasting/DFM/data/*.csv
+!/forecasting/DFM/data/vintages/*.csv
+!/forecasting/DFM/model/*.csv
+!/forecasting/hard_data/vintages_hard/*.csv
+!/forecasting/hard_data/vintages_both/*.csv
+!/forecasting/hard_data/*.csv
 
 *.eps
 *.xlsx
