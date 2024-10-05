@@ -4,13 +4,13 @@ clear; close all; clc;
 %-------------------------------------------------------------------------%
 %- This script tests the EM algorithm for a mixed-frequency dynamic factor
 %- model using daily, monthly and quarterly data. The input data is stored in the CSV 
-%- file `vint_2010_1_30_both.csv`, which is produced by the `construct_vintage_both.R`
+%- file `vint_2010_3_30_both.csv`, which is produced by the `construct_vintage_both.R`
 %- script. The file also contains the W's and Xi's. 
 %- Currently 15 daily and twelve monthly series are used in the estimation.  
 %- Main output is a plot displaying 
 %- a) the standardized daily series and quarterly GDP growth
 %- b) the estimated daily factor
-%- c) the daily GDP growth as well as back-, now- and forecasts
+%- c) the daily GDP growth as well as now- and forecasts
 %-    (1Q and 2Q) along with the realizations for the particular vintage. 
 %-------------------------------------------------------------------------%
 %-------------------------------------------------------------------------%
@@ -19,9 +19,10 @@ clear; close all; clc;
 %-------------------------------------------------------------------------%
 % user settings
 %-------------------------------------------------------------------------%
-filename = 'vint_2010_1_30.csv';
-%filename = 'vint_2010_10_30.csv'
-%filename = 'vint_2013_1_30_both.csv'
+filename = 'vint_2010_3_30.csv';
+%filename = 'vint_2010_12_30.csv'
+%filename = 'vint_2013_3_30.csv'
+%filename = 'vint_2010_3_30_both.csv';
 %dirname = '..\..\hard_data\';
 dirname = '..\..\hard_data\vintages_both\';
 Nr = 2;
@@ -78,8 +79,7 @@ aux.Xi_qd = tmp.data(:, find(strcmp('Xi_qd', tmp.textdata(1,:))) - offset_numcol
 aux.W_qd_p = tmp.data(:, find(strcmp('W_qd_p', tmp.textdata(1,:))) - offset_numcols);
 aux.W_qd_c = tmp.data(:, find(strcmp('W_qd_c', tmp.textdata(1,:))) - offset_numcols);
 
-% inds for back-, now- and forecasts
-ind_backcast = logical(tmp.data(:, find(strcmp('ind_backcast', tmp.textdata(1,:))) - offset_numcols));
+% inds for now- and forecasts
 ind_nowcast = logical(tmp.data(:, find(strcmp('ind_nowcast', tmp.textdata(1,:))) - offset_numcols));
 ind_forecast = logical(tmp.data(:, find(strcmp('ind_forecast1Q', tmp.textdata(1,:))) - offset_numcols));
 
@@ -154,15 +154,12 @@ y_eoq_hat = NaN(1, Nt);
 y_eoq_hat(:, ~isnan(y_q)) = chi_q(:, ~isnan(y_q)); 
 
 y_eoq_fore = NaN(1, Nt+Nh); 
-y_eoq_fore(1, ind_backcast) = chi_q(1, ind_backcast); 
 y_eoq_fore(1, ind_nowcast) = chi_q(1, ind_nowcast); 
 y_eoq_fore(1, ind_forecast) = chi_q(1, ind_forecast); 
 y_eoq_fore(1, end) = chi_q(1, end);
 
 % actuals
 acts = [y_q NaN(1, Nh)];
-%acts(1, ind_backcast) = -0.04;
-acts(1, ind_backcast) = 0.04;
 acts(1, ind_nowcast) = 0.64;
 %acts(1, ind_forecast) = 9.1;
 acts(1, ind_forecast) = 8.63;
@@ -185,6 +182,6 @@ fig = gcf;
 orient(fig,'landscape')
 fig.Units = 'inches';
 fig.OuterPosition = [0.25 0.25 10 7];
-exportgraphics(fig, 'results_2010_01_30_2_factors_both_K_30_10_stable.pdf'); 
+exportgraphics(fig, 'results_2010_03_30_2_factors_both_K_30_10_stable.pdf'); 
 
 

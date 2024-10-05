@@ -39,6 +39,9 @@ __pycache__/
 # Unnecessary pdf files
 /forecasting_60days/reuters-poll-eval/*.pdf
 /forecasting_90days/reuters-poll-eval/*.pdf
+# Unnecessary Rda files
+/forecasting_60days/hard_data/*.Rda
+/forecasting_90days/hard_data/*.Rda
 
 # Ignore all files within specific directories
 /MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BamS_Konjunktur_rtf/*

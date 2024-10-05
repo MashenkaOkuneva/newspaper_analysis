@@ -3,14 +3,15 @@ clear; close all; clc;
 %-------------------------------------------------------------------------%
 %-------------------------------------------------------------------------%
 %- This script tests the EM algorithm for a mixed-frequency dynamic factor
-%- model using daily, monthly and quarterly data. The input data is stored in the CSV 
-%- file `vint_2010_1_30_both.csv`, which is produced by the `construct_vintage_both.R`
+%- model using daily and quarterly data. The input data is stored in the CSV 
+%- file `vint_2010_3_30.csv`, which is produced by the `construct_vintage.R`
 %- script. The file also contains the W's and Xi's. 
-%- Currently 15 daily and twelve monthly series are used in the estimation.  
+%- Currently 10 topics that have the highest correlation with GDP
+%- growth are used in the estimation. 
 %- Main output is a plot displaying 
-%- a) the standardized daily series and quarterly GDP growth
+%- a) the standardized topics and quarterly GDP growth
 %- b) the estimated daily factor
-%- c) the daily GDP growth as well as back-, now- and forecasts
+%- c) the daily GDP growth as well as now- and forecasts
 %-    (1Q and 2Q) along with the realizations for the particular vintage. 
 %-------------------------------------------------------------------------%
 %-------------------------------------------------------------------------%
@@ -19,12 +20,11 @@ clear; close all; clc;
 %-------------------------------------------------------------------------%
 % user settings
 %-------------------------------------------------------------------------%
-filename = 'vint_2010_1_30.csv';
-%filename = 'vint_2010_10_30.csv'
-%filename = 'vint_2013_1_30_both.csv'
-%dirname = '..\..\hard_data\';
-dirname = '..\..\hard_data\vintages_both\';
-Nr = 2;
+filename = 'vint_2010_3_30.csv';
+%filename = 'vint_2010_6_30.csv'
+%dirname = '..\data\';
+dirname = '..\data\vintages\';
+Nr = 1;
 Np = 10;
 
 %-------------------------------------------------------------------------%
@@ -40,29 +40,10 @@ aux.ind_sample = logical(tmp.data(:, find(strcmp('ind_sample', tmp.textdata(1,:)
 
 % daily data
 ind_y_d = find(contains(tmp.textdata(1,:), 'y_d_')) - offset_numcols;
-%ind_y_d = [25];
-%ind_y_d = [5];
 %ind_y_d = setdiff(ind_y_d, ind_y_d([6, 9, 23])); % manually remove T05, T07, T21
-%ind_y_d = setdiff(ind_y_d, ind_y_d([22, 23, 24, 25])); % manually remove four daily financial series
-%ind_y_d = setdiff(ind_y_d, ind_y_d([22])); % manually remove one daily financial series
-%ind_y_d = setdiff(ind_y_d, ind_y_d([12])); % manually remove one daily financial series
-%ind_y_d = setdiff(ind_y_d, ind_y_d([9])); % manually remove one daily financial series
-%ind_y_d = setdiff(ind_y_d, ind_y_d([10])); % manually remove one daily financial series
-ind_y_d = setdiff(ind_y_d, ind_y_d([size(ind_y_d, 2)-3])); % manually remove one daily financial series
-%ind_y_d = setdiff(ind_y_d, ind_y_d([7])); % manually remove one daily financial series
-%ind_y_d = setdiff(ind_y_d, ind_y_d([17])); % manually remove one daily financial series
-%ind_y_d = setdiff(ind_y_d, ind_y_d([21, 22, 23, 24, 25]));
-%ind_y_d = setdiff(ind_y_d, ind_y_d([6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,22])); 
 %ind_y_d = [1 11 37 45] + 4; % topics T0, T10, T21, T36, T44 => highest correlated with GDP
 y_d = tmp.data(aux.ind_sample, ind_y_d)';
 y_d_fore = tmp.data(~aux.ind_sample, ind_y_d)';
-
-% monthly data
-ind_y_m = find(contains(tmp.textdata(1,:), 'y_m_')) - offset_numcols;
-%ind_y_m = [10 11 12];
-y_m = tmp.data(aux.ind_sample, ind_y_m)';
-y_m_fore = tmp.data(~aux.ind_sample, ind_y_m)';
-aux.ind_m_flow = [repelem(true, size(y_m,1))];
 
 % quarterly data
 ind_y_q = find(contains(tmp.textdata(1,:), 'y_q_')) - offset_numcols;
@@ -71,15 +52,11 @@ y_q_fore = tmp.data(~aux.ind_sample, ind_y_q)';
 aux.ind_q_flow = true; 
 
 % weights and Xi
-aux.Xi_md = tmp.data(:, find(strcmp('Xi_md', tmp.textdata(1,:))) - offset_numcols);
-aux.W_md_p = tmp.data(:, find(strcmp('W_md_p', tmp.textdata(1,:))) - offset_numcols);
-aux.W_md_c = tmp.data(:, find(strcmp('W_md_c', tmp.textdata(1,:))) - offset_numcols);
 aux.Xi_qd = tmp.data(:, find(strcmp('Xi_qd', tmp.textdata(1,:))) - offset_numcols);
 aux.W_qd_p = tmp.data(:, find(strcmp('W_qd_p', tmp.textdata(1,:))) - offset_numcols);
 aux.W_qd_c = tmp.data(:, find(strcmp('W_qd_c', tmp.textdata(1,:))) - offset_numcols);
 
-% inds for back-, now- and forecasts
-ind_backcast = logical(tmp.data(:, find(strcmp('ind_backcast', tmp.textdata(1,:))) - offset_numcols));
+% inds for now- and forecasts
 ind_nowcast = logical(tmp.data(:, find(strcmp('ind_nowcast', tmp.textdata(1,:))) - offset_numcols));
 ind_forecast = logical(tmp.data(:, find(strcmp('ind_forecast1Q', tmp.textdata(1,:))) - offset_numcols));
 
@@ -94,16 +71,13 @@ dates_plot = tmp.data(ind_plot, 1);
 % standardize
 y_d_stand = (y_d - nanmean(y_d, 2)) ./ nanstd(y_d, [], 2);
 y_d_fore_stand = (y_d_fore - nanmean(y_d, 2)) ./ nanstd(y_d, [], 2);
-y_m_stand = (y_m - nanmean(y_m, 2)) ./ nanstd(y_m, [], 2);
-y_m_fore_stand = (y_m_fore - nanmean(y_m, 2)) ./ nanstd(y_m, [], 2);
 mean_gdp = nanmean(y_q);
 std_gdp = nanstd(y_q);
 y_q_stand = (y_q - mean_gdp) / std_gdp; 
 y_q_fore_stand = (y_q_fore - mean_gdp) / std_gdp; 
 
 % starting values
-params = f_start_vals(y_d_stand, [], y_m_stand, y_q_stand, aux, Nr, Np);
-%params = f_start_vals(y_d_stand, [], [], y_q_stand, aux, Nr, Np);
+params = f_start_vals(y_d_stand, [], [], y_q_stand, aux, Nr, Np);
 
 %-------------------------------------------------------------------------%
 % EM algorithm
@@ -111,15 +85,13 @@ params = f_start_vals(y_d_stand, [], y_m_stand, y_q_stand, aux, Nr, Np);
 
 params_init = params; 
 tol = 1e-5;
-params = f_EMalg(y_d_stand, [], y_m_stand, y_q_stand, aux, params, tol);
-%params = f_EMalg(y_d_stand, [], [], y_q_stand, aux, params, tol); 
+params = f_EMalg(y_d_stand, [], [], y_q_stand, aux, params, tol); 
 
 %-------------------------------------------------------------------------%
 % run KF/KS to get back-, now- and forecasts
 %-------------------------------------------------------------------------%
   
-dat = [[y_d_stand y_d_fore_stand]; [y_m_stand y_m_fore_stand]; [y_q_stand y_q_fore_stand]]; 
-%dat = [[y_d_stand y_d_fore_stand]; [y_q_stand y_q_fore_stand]]; 
+dat = [[y_d_stand y_d_fore_stand]; [y_q_stand y_q_fore_stand]]; 
 [Z, H, T, R, Q] = f_state_space_params(params, aux, size(dat, 2));
 s0 = zeros(size(T,1),1); 
 P0 = 100 * eye(size(T,1)); 
@@ -137,8 +109,8 @@ plot(y_d_stand(2:end,:)', 'b-');
 p2 = plot(y_q_stand', 'kd', 'MarkerFaceColor', 'k', 'MarkerSize',4);
 xticks(ind_plot(1:5:end))
 xticklabels(dates_plot(1:5:end))
-legend([p1, p2], {'daily series', 'GDP growth'}, 'Location', 'best')
-title('(standardized) daily series and GDP growth')
+legend([p1, p2], {'daily topics', 'GDP growth'}, 'Location', 'best')
+title('(standardized) daily topics and GDP growth')
 
 subplot(3,1,2)
 plot(stT(1:Nr,:)', 'b-')
@@ -154,15 +126,12 @@ y_eoq_hat = NaN(1, Nt);
 y_eoq_hat(:, ~isnan(y_q)) = chi_q(:, ~isnan(y_q)); 
 
 y_eoq_fore = NaN(1, Nt+Nh); 
-y_eoq_fore(1, ind_backcast) = chi_q(1, ind_backcast); 
 y_eoq_fore(1, ind_nowcast) = chi_q(1, ind_nowcast); 
 y_eoq_fore(1, ind_forecast) = chi_q(1, ind_forecast); 
 y_eoq_fore(1, end) = chi_q(1, end);
 
 % actuals
 acts = [y_q NaN(1, Nh)];
-%acts(1, ind_backcast) = -0.04;
-acts(1, ind_backcast) = 0.04;
 acts(1, ind_nowcast) = 0.64;
 %acts(1, ind_forecast) = 9.1;
 acts(1, ind_forecast) = 8.63;
@@ -185,6 +154,6 @@ fig = gcf;
 orient(fig,'landscape')
 fig.Units = 'inches';
 fig.OuterPosition = [0.25 0.25 10 7];
-exportgraphics(fig, 'results_2010_01_30_2_factors_both_K_30_10_stable.pdf'); 
+exportgraphics(fig, 'results_2010_03_30_choose_10stable_1fac_K_30.pdf'); 
 
 
