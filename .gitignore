@@ -25,6 +25,10 @@ __pycache__/
 !/forecasting/hard_data/vintages_hard/*.csv
 !/forecasting/hard_data/vintages_both/*.csv
 !/forecasting/hard_data/*.csv
+!/forecasting/MIDAS/vint_2010_1_30.csv
+!/forecasting/MIDAS/vintages_MIDAS/*.csv
+!/forecasting/hard_data/vintages_hard_MIDAS/*.csv
+!/forecasting/hard_data/vintages_both_MIDAS/*.csv
 
 *.eps
 *.xlsx
@@ -39,9 +43,16 @@ __pycache__/
 # Unnecessary pdf files
 /forecasting_60days/reuters-poll-eval/*.pdf
 /forecasting_90days/reuters-poll-eval/*.pdf
+/forecasting/MIDAS/*.pdf
+/forecasting_60days/MIDAS/*.pdf
+/forecasting_90days/MIDAS/*.pdf
 # Unnecessary Rda files
 /forecasting_60days/hard_data/*.Rda
 /forecasting_90days/hard_data/*.Rda
+# Temp
+/forecasting/MIDAS/*.tex
+/forecasting_60days/MIDAS/*.tex
+/forecasting_90days/MIDAS/*.tex
 
 # Ignore all files within specific directories
 /MediaTenor_processing/MediaTenor_LexisNexis_Factiva/BamS_Konjunktur_rtf/*
