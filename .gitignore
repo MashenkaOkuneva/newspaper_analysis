@@ -97,7 +97,7 @@ __pycache__/
 !/forecasting_60days/MIDAS/vintages_MIDAS.R
 !/forecasting_90days/MIDAS/vintages_MIDAS.R
 
-# Temp
+# Unnecessary .tex files
 /forecasting/MIDAS/*.tex
 /forecasting_60days/MIDAS/*.tex
 /forecasting_90days/MIDAS/*.tex
