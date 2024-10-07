@@ -56,7 +56,7 @@ The repository is organized into several folders, each dedicated to a specific p
   - **[Sign_adjusted_topics.ipynb](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/topics/Sign_adjusted_topics.ipynb)**: Generates sign-adjusted topic time series, visualizes them, and conducts robustness checks for the sentiment adjustment methodology.
   - **[Top N articles for Each Topic.ipynb](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/topics/Top%20N%20articles%20for%20Each%20Topic.ipynb)**: Explores the top N articles with the highest proportions of different topics, providing insight into the key discussions associated with those topics.
 
-- **[forecasting](https://github.com/MashenkaOkuneva/newspaper_analysis/tree/main/forecasting)**:
+- **[forecasting](https://github.com/MashenkaOkuneva/newspaper_analysis/tree/main/forecasting)**: Contains the code for conducting encompassing tests for sign-adjusted topics and generating forecasts of annualized GDP growth using various models, including the DFM, MIDAS model, and the forecast combination approach.
   - **[correlations.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/DFM/data/correlations.R)**: This script calculates the correlations between sign-adjusted topics and annualized quarterly GDP growth for each data vintage. It outputs CSV files containing the top 20 topics with the highest absolute correlations for each vintage. All resulting CSV files are available in the folder [correlations](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/DFM/data/correlations).
   - **[stable_correlations.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/DFM/data/stable_correlations.R)**: Identifies how frequently each topic appeared among the 10 topics most correlated with GDP growth across different data vintages. 
   - **[average_correlation_selected_topics.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/DFM/data/average_correlation_selected_topics.R)**: Calculates the average correlation across data vintages for topics selected in the out-of-sample forecasting experiment.
@@ -116,6 +116,11 @@ This project uses two separate Python environments: Python 3 for our current cod
 
 - **Python 2 Environment**: For notebooks that require Python 2 (`Pre-processing (train data).ipynb`, `Pre-processing (test data).ipynb`, `Cross-validation, K={10,50,100}.ipynb`, `Cross-validation, K={150,200,250}.ipynb`, `Topic model estimation.ipynb`), please set up your environment using the `py2_env.yml` file available in this repository.
 - **Python 3 Environment**: For the rest of the notebooks, use the `py3_env.yml` file to set up the appropriate Python 3 environment.
+
+### R and MATLAB Versions
+The R and MATLAB scripts in this project were tested using the following versions:
+- **R**: 4.4.0
+- **MATLAB**: R2024a
 
 ### System Requirements
 
