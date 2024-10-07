@@ -88,6 +88,15 @@ __pycache__/
 !/forecasting_60days/MIDAS/Ridge_all_p_both.R
 !/forecasting_90days/MIDAS/Ridge_all_p_both.R
 
+!/forecasting_60days/MIDAS/construct_vintage_MIDAS.R
+!/forecasting_90days/MIDAS/construct_vintage_MIDAS.R
+
+!/forecasting_60days/MIDAS/cross_validation_ts.R
+!/forecasting_90days/MIDAS/cross_validation_ts.R
+
+!/forecasting_60days/MIDAS/vintages_MIDAS.R
+!/forecasting_90days/MIDAS/vintages_MIDAS.R
+
 # Temp
 /forecasting/MIDAS/*.tex
 /forecasting_60days/MIDAS/*.tex
