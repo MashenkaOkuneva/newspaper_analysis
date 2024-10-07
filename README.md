@@ -100,6 +100,15 @@ The repository is organized into several folders, each dedicated to a specific p
     - **[vintages_both_MIDAS.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/hard_data/vintages_both_MIDAS.R)**: Generates 34 real-time data vintages for a combined text and hard data forecasting model. Each vintage includes 1 daily financial series, 10 sign-adjusted topics transformed to monthly frequency, 12 monthly economic variables, and annualized GDP growth. In each vintage, only variables available for the entire sample period are included. Forecasts are generated 30 days after the start of the quarter, covering the period from 30/01/2010 to 30/04/2018.
     - **[LASSO_all_p_both.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/MIDAS/LASSO_all_p_both.R)**: Conducts a forecasting experiment using a MIDAS model that combines both hard data and text data, with LASSO applied for dimensionality reduction. Forecasts are evaluated across different horizons and lag structures, and results are compared to AR(1) and Reuters poll forecasts.
 
+  - **[combination](https://github.com/MashenkaOkuneva/newspaper_analysis/tree/main/forecasting/combination)**: This folder contains R scripts for generating forecasts of annualized GDP growth for Germany using the forecast combination approach.
+    - **[fe_forecast_combination.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/combination/fe_forecast_combination.R)**: Combines forecasts from two separate DFM models—one based on text data and the other on hard economic data. After combining the forecasts, the script calculates forecast errors for all horizons.
+    - **[fe_forecast_combination_MIDAS.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/combination/fe_forecast_combination_MIDAS.R)**: Combines forecasts from two different MIDAS models: one using only text data and the other using only hard economic data. Forecast errors are calculated for all horizons.
+    - **[forecast_combination_plot.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/combination/forecast_combination_plot.R)**: Plots combined DFM forecasts against actual GDP growth for all forecasting horizons using both equal and optimal weights.
+    - **[forecast_combination_plot_MIDAS.R](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/combination/forecast_combination_plot_MIDAS.R)**: Plots combined MIDAS forecasts against actual GDP growth for all forecasting horizons using both equal and optimal weights.
+
+  - **[DM](https://github.com/MashenkaOkuneva/newspaper_analysis/tree/main/forecasting/DM)**: This folder includes a MATLAB script that conducts the Diebold-Mariano test to evaluate the accuracy of different forecasting models.
+    - **[Diebold_Mariano.m](https://github.com/MashenkaOkuneva/newspaper_analysis/blob/main/forecasting/DM/Diebold_Mariano.m)**: Conducts the Diebold-Mariano test to compare forecast accuracy between different models over four forecasting horizons.
+
 ## Project Environment Setup
 
 ### Python Versions and Environment Setup
