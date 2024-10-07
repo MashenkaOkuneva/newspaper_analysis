@@ -49,6 +49,45 @@ __pycache__/
 # Unnecessary Rda files
 /forecasting_60days/hard_data/*.Rda
 /forecasting_90days/hard_data/*.Rda
+# Unnecessary R scripts
+/forecasting_60days/MIDAS/*.R
+/forecasting_90days/MIDAS/*.R
+# Exceptions:
+!/forecasting_60days/MIDAS/LASSO_all_p.R
+!/forecasting_90days/MIDAS/LASSO_all_p.R
+!/forecasting_60days/MIDAS/LASSO_all_p_hard.R
+!/forecasting_90days/MIDAS/LASSO_all_p_hard.R
+!/forecasting_60days/MIDAS/LASSO_all_p_both.R
+!/forecasting_90days/MIDAS/LASSO_all_p_both.R
+
+!/forecasting_60days/MIDAS/LASSO_OLS_all_p.R
+!/forecasting_90days/MIDAS/LASSO_OLS_all_p.R
+!/forecasting_60days/MIDAS/LASSO_OLS_all_p_hard.R
+!/forecasting_90days/MIDAS/LASSO_OLS_all_p_hard.R
+!/forecasting_60days/MIDAS/LASSO_OLS_all_p_both.R
+!/forecasting_90days/MIDAS/LASSO_OLS_all_p_both.R
+
+!/forecasting_60days/MIDAS/PCA_all_p.R
+!/forecasting_90days/MIDAS/PCA_all_p.R
+!/forecasting_60days/MIDAS/PCA_all_p_hard.R
+!/forecasting_90days/MIDAS/PCA_all_p_hard.R
+!/forecasting_60days/MIDAS/PCA_all_p_both.R
+!/forecasting_90days/MIDAS/PCA_all_p_both.R
+
+!/forecasting_60days/MIDAS/RF_all_p.R
+!/forecasting_90days/MIDAS/RF_all_p.R
+!/forecasting_60days/MIDAS/RF_all_p_hard.R
+!/forecasting_90days/MIDAS/RF_all_p_hard.R
+!/forecasting_60days/MIDAS/RF_all_p_both.R
+!/forecasting_90days/MIDAS/RF_all_p_both.R
+
+!/forecasting_60days/MIDAS/Ridge_all_p.R
+!/forecasting_90days/MIDAS/Ridge_all_p.R
+!/forecasting_60days/MIDAS/Ridge_all_p_hard.R
+!/forecasting_90days/MIDAS/Ridge_all_p_hard.R
+!/forecasting_60days/MIDAS/Ridge_all_p_both.R
+!/forecasting_90days/MIDAS/Ridge_all_p_both.R
+
 # Temp
 /forecasting/MIDAS/*.tex
 /forecasting_60days/MIDAS/*.tex
