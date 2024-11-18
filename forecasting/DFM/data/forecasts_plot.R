@@ -12,10 +12,10 @@ gdp_growth <- read.csv(file.path(current_dir, "gdp_growth.csv"), stringsAsFactor
 model_dir <- gsub("data$", "model", current_dir)
 
 # Load CSVs from the "model" directory
-backcasts <- read.csv(file.path(model_dir, "backcasts_choose_10stable_1fac_K_30.csv"), header = FALSE, stringsAsFactors = FALSE)
-nowcasts <- read.csv(file.path(model_dir, "nowcasts_choose_10stable_1fac_K_30.csv"), header = FALSE, stringsAsFactors = FALSE)
-forecasts_1step <- read.csv(file.path(model_dir, "forecasts_1step_choose_10stable_1fac_K_30.csv"), header = FALSE, stringsAsFactors = FALSE)
-forecasts_2step <- read.csv(file.path(model_dir, "forecasts_2step_choose_10stable_1fac_K_30.csv"), header = FALSE, stringsAsFactors = FALSE)
+backcasts <- read.csv(file.path(model_dir, "backcasts_hard_1fac_no_trafo_1345_li.csv"), header = FALSE, stringsAsFactors = FALSE)
+nowcasts <- read.csv(file.path(model_dir, "nowcasts_hard_1fac_no_trafo_1345_li.csv"), header = FALSE, stringsAsFactors = FALSE)
+forecasts_1step <- read.csv(file.path(model_dir, "forecasts_1step_hard_1fac_no_trafo_1345_li.csv"), header = FALSE, stringsAsFactors = FALSE)
+forecasts_2step <- read.csv(file.path(model_dir, "forecasts_2step_hard_1fac_no_trafo_1345_li.csv"), header = FALSE, stringsAsFactors = FALSE)
 
 # Assigning column names
 names(backcasts) <- c("date", "forecast")
@@ -51,7 +51,7 @@ generate_plot <- function(data, title_str, file_name) {
 }
 
 # Generate plots for each dataframe
-generate_plot(backcasts, "Backcasts vs. GDP Growth", "backcasts_plot_choose_10stable_1fac_K_30.pdf")
-generate_plot(nowcasts, "Nowcasts vs. GDP Growth", "nowcasts_plot_choose_10stable_1fac_K_30.pdf")
-generate_plot(forecasts_1step, "One-step-ahead Forecasts vs. GDP Growth", "forecasts_1step_plot_choose_10stable_1fac_K_30.pdf")
-generate_plot(forecasts_2step, "Two-step-ahead Forecasts vs. GDP Growth", "forecasts_2step_plot_choose_10stable_1fac_K_30.pdf")
+generate_plot(backcasts, "Backcasts vs. GDP Growth", "backcasts_plot_hard_1fac_no_trafo_1345_li.pdf")
+generate_plot(nowcasts, "Nowcasts vs. GDP Growth", "nowcasts_plot_hard_1fac_no_trafo_1345_li.pdf")
+generate_plot(forecasts_1step, "One-step-ahead Forecasts vs. GDP Growth", "forecasts_1step_plot_hard_1fac_no_trafo_1345_li.pdf")
+generate_plot(forecasts_2step, "Two-step-ahead Forecasts vs. GDP Growth", "forecasts_2step_plot_hard_1fac_no_trafo_1345_li.pdf")

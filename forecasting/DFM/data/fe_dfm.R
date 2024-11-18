@@ -12,10 +12,10 @@ gdp_growth <- read.csv(file.path(current_dir, "gdp_growth.csv"), stringsAsFactor
 model_dir <- gsub("data$", "model", current_dir)
 
 # Load CSVs from the "model" directory
-backcasts <- read.csv(file.path(model_dir, "backcasts_choose_10stable_1fac_K_30.csv"), header = FALSE, stringsAsFactors = FALSE)
-nowcasts <- read.csv(file.path(model_dir, "nowcasts_choose_10stable_1fac_K_30.csv"), header = FALSE, stringsAsFactors = FALSE)
-forecasts_1step <- read.csv(file.path(model_dir, "forecasts_1step_choose_10stable_1fac_K_30.csv"), header = FALSE, stringsAsFactors = FALSE)
-forecasts_2step <- read.csv(file.path(model_dir, "forecasts_2step_choose_10stable_1fac_K_30.csv"), header = FALSE, stringsAsFactors = FALSE)
+backcasts <- read.csv(file.path(model_dir, "backcasts_both_2fac_K_30_10_stable.csv"), header = FALSE, stringsAsFactors = FALSE)
+nowcasts <- read.csv(file.path(model_dir, "nowcasts_both_2fac_K_30_10_stable.csv"), header = FALSE, stringsAsFactors = FALSE)
+forecasts_1step <- read.csv(file.path(model_dir, "forecasts_1step_both_2fac_K_30_10_stable.csv"), header = FALSE, stringsAsFactors = FALSE)
+forecasts_2step <- read.csv(file.path(model_dir, "forecasts_2step_both_2fac_K_30_10_stable.csv"), header = FALSE, stringsAsFactors = FALSE)
 
 # Assigning column names
 names(backcasts) <- c("date", "forecast")
@@ -44,4 +44,4 @@ combined_errors <- data.frame(
 )
 
 # Save the combined errors to a CSV 
-write.csv(combined_errors, file.path(current_dir, "forecast_errors_dfm_choose_10stable_1fac_K_30.csv"), row.names = FALSE)
+write.csv(combined_errors, file.path(current_dir, "forecast_errors_dfm_both_2fac_K_30_10_stable.csv"), row.names = FALSE)

@@ -34,7 +34,7 @@ nowcast_dates = [];
 forecast1_dates = [];
 forecast2_dates = [];
 
-for i = 1:length(files)
+parfor i = 1:length(files)
     [b, n, f1, f2, db, dn, df1, df2] = run_forecast_hard(files(i).name, dir_path, 1, 10);
     
     backcasts = [backcasts; b];
