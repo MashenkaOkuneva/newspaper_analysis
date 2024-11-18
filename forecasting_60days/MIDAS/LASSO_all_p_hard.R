@@ -393,7 +393,7 @@ for (p in 0:p_max) {
   # Save results
   comparison_results[[p+1]] <- list(AR1 = list(two_sided = ar1_two_sided, one_sided = ar1_one_sided),
                                     Professional = list(two_sided = professional_two_sided, one_sided = professional_one_sided))
-  l
+  
 }
 
 # Create LaTeX tables
