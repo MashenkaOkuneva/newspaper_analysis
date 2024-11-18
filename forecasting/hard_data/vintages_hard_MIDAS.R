@@ -20,6 +20,7 @@ library(bundesbank)
 library(tibble)
 library(zoo)
 library(purrr)
+library(readxl)
 
 # FUNCTIONS ----
 #_____________________________________________________#
@@ -120,9 +121,9 @@ prepare_vintage <- function(vintage, date_h, sample_start = c("1992-01-01"),
       day = day(date),
       quarter = quarter(date)
     ) %>%
-    # 5. Filter data to be <= vintage by converting to the same format
+    # 4. Filter data to be <= vintage by converting to the same format
     filter(format(date, "%Y-%m-%d") <= vintage) %>%
-    # 4. Arrange columns
+    # 5. Arrange columns
     select(date, year, quarter, month, day, financial_1)
   
   # get rid of raw df
@@ -190,12 +191,26 @@ prepare_vintage <- function(vintage, date_h, sample_start = c("1992-01-01"),
   #}
   
   # Specify the range of i
-  i_values <- 2:5
+  i_values <- 4:5
   
   # Loop to load each Rda file
   for (i in i_values) {
     load(paste0("financial_", i, ".Rda"))
   }
+  
+  # Read Date and 5-year federal note yield into financial2 (using LSEG Datastream data for full sample coverage)
+  financial2 <- read_excel("Bond_yields.xlsx", col_types = c("date", "numeric", "skip"))
+  
+  # Rename columns: Date to date, 5-year yield to financial_2
+  financial2 <- financial2 %>%
+    rename(date = Date, financial_2 = `5year`)
+  
+  # Read Date and 10-year government bond yield into financial3 (using LSEG Datastream data for full sample coverage)
+  financial3 <- read_excel("Bond_yields.xlsx", col_types = c("date", "skip", "numeric"))
+  
+  # Rename columns: Date to date, 10-year yield to financial_3
+  financial3 <- financial3 %>%
+    rename(date = Date, financial_3 = `10year`)
   
   # Ensure all date columns are Date objects
   financial2$date <- as.Date(financial2$date, format = "%Y-%m-%d")
@@ -226,6 +241,31 @@ prepare_vintage <- function(vintage, date_h, sample_start = c("1992-01-01"),
       across(starts_with("financial_"), ~suppressWarnings(as.numeric(.)))
     )
   
+  # Aggregate daily data to monthly frequency
+  df_financial_monthly <- df_financial %>%
+    group_by(year, month) %>%
+    summarize(
+      # Keep the last value for indices at the end of each month
+      financial_1 = ifelse(all(is.na(financial_1)), NA, last(na.omit(financial_1))),
+      
+      # Average for bond yields, returning NA if all values in the month are NA
+      financial_2 = ifelse(all(is.na(financial_2)), NA, mean(financial_2, na.rm = TRUE)),
+      financial_3 = ifelse(all(is.na(financial_3)), NA, mean(financial_3, na.rm = TRUE)),
+      
+      # Keep the last value for indices at the end of each month
+      financial_4 = ifelse(all(is.na(financial_4)), NA, last(na.omit(financial_4))),
+      financial_5 = ifelse(all(is.na(financial_5)), NA, last(na.omit(financial_5)))
+    ) %>%
+    ungroup() %>%  # Remove grouping to ensure continuity across the whole dataset
+    arrange(year, month) %>%  # Arrange data to ensure proper order
+    mutate(
+      # Create a date column corresponding to the last day of the month
+      date = ceiling_date(as.Date(paste(year, month, "01"), format = "%Y %m %d"), unit = "month") - days(1),
+      quarter = quarter(date),
+      day = day(date)
+    ) %>%
+    select(date, everything())
+  
   log_diff <- function(x) {
     x_log = log(x)
     x_log_filled = zoo::na.locf(x_log, na.rm = FALSE)
@@ -237,87 +277,19 @@ prepare_vintage <- function(vintage, date_h, sample_start = c("1992-01-01"),
     x_filled - lag(x_filled)
   }
   
-  df_financial <- df_financial %>%
+  # Apply the transformations to the monthly data
+  df_financial_trafo_M <- df_financial_monthly %>%
     mutate(
-      # Log diff transformation while preserving NAs
+      # Log diff transformation for indices while preserving NAs
       across(c(financial_1, financial_4, financial_5), 
              ~ ifelse(is.na(.), NA, log_diff(.)), .names = "{col}"),
-      # Simple diff transformation while preserving NAs
+      
+      # Simple diff transformation for bond yields while preserving NAs
       across(c(financial_2, financial_3), 
              ~ ifelse(is.na(.), NA, simple_diff(.)), .names = "{col}")
     )
   
-  # if no further transformations
-  df_financial %>% filter(date >= as.Date(sample_start)) -> df_financial
-  df_financial_trafo <- df_financial
-  
-  # adjust sample (leaving K additional rows at start which will be removed after smoothing)
-  #df_financial %>% filter(date >= as.Date(sample_start) - days(K)) -> df_financial
-  
-  # col indices corresponding to financial series
-  #ind_financial <- which(grepl("financial_", names(df_financial)))
-  
-  # remove outlier
-  #ind_outl <- apply(df_financial[, ind_financial], c(2), f_outl, aalpha = aalpha)
-  #dat <- df_financial[, ind_financial]
-  #dat[ind_outl] <- NA
-  
-  # store pattern of missings
-  #ind_NA <- is.na(dat)
-  #colnames(ind_NA) <- names(df_financial)[grepl("financial_", names(df_financial))]
-  
-  # moving average
-  #dat_ma <- apply(dat, c(2), rollmean, k = K)
-  #dat_ma <- apply(df_financial[, ind_financial], c(2), rollmean, k = K)
-  
-  # detrend with biweight filter
-  #dat_bw <- apply(dat_ma, c(2), bw_filter, bw = bw)
-  #dat_detrend <- dat_ma - dat_bw # de-trended daily series
-  
-  # reimpose NA pattern
-  #dat_detrend_NA <- dat_detrend
-  #dat_detrend_NA[ind_NA] <- NA
-  
-  # store in df_financial_trafo
-  #df_financial_trafo <- df_financial
-  #df_financial_trafo[ind_financial] <- dat_detrend_NA
-  #df_financial_trafo[ind_financial] <- dat_detrend
-  
-  # rm first K rows
-  #df_financial_trafo <- df_financial_trafo[seq(K+1, nrow(df_financial_trafo)), ]
-  
-  # convert transformed daily series to monthly frequency
-  #df_financial_trafo_M <- df_financial_trafo %>%
-  #  group_by(year, month) %>%
-  #  summarise(across(starts_with("financial"), ~mean(., na.rm = TRUE))) %>%
-  #  mutate(
-  #    date = ceiling_date(as.Date(paste(year, month, "01"), format = "%Y %m %d"), unit="month") - days(1),
-  #    quarter = quarter(date),
-  #    day = day(date)
-  #  ) %>%
-  #  select(date, everything())  # Reordering columns so 'date' is first
-  
-  # convert transformed daily series to monthly frequency
-  df_financial_trafo_M <- df_financial_trafo %>%
-    group_by(year, month) %>%
-    summarise(
-      # Cumulative sum for DAX
-      financial_1 = ifelse(all(is.na(financial_1)), NA, sum(financial_1, na.rm = TRUE)),
-      
-      # Average for yields
-      financial_2 = ifelse(all(is.na(financial_2)), NA, mean(financial_2, na.rm = TRUE)),
-      financial_3 = ifelse(all(is.na(financial_3)), NA, mean(financial_3, na.rm = TRUE)),
-      
-      # Cumulative sum for nominal effective exchange rate indices
-      financial_4 = ifelse(all(is.na(financial_4)), NA, sum(financial_4, na.rm = TRUE)),
-      financial_5 = ifelse(all(is.na(financial_5)), NA, sum(financial_5, na.rm = TRUE))
-    ) %>%
-    mutate(
-      date = ceiling_date(as.Date(paste(year, month, "01"), format = "%Y %m %d"), unit = "month") - days(1),
-      quarter = quarter(date),
-      day = day(date)
-    ) %>%
-    select(date, everything()) 
+  df_financial_trafo_M %>% filter(date >= as.Date(sample_start)) -> df_financial_trafo_M
   
   # Identify the financial columns with any NA values
   cols_to_remove <- names(df_financial_trafo_M)[
@@ -453,7 +425,7 @@ prepare_vintage <- function(vintage, date_h, sample_start = c("1992-01-01"),
   # List of objects to remove
   
   objects_to_remove <- c(
-    "df_financial", "df_financial_trafo", "economic_i", 
+    "df_financial", "economic_i", 
     "economic_i_series", "financial2", "financial3", "financial4", 
     "financial5"
   )
@@ -675,7 +647,7 @@ clusterEvalQ(cl, {
   library(tibble)
   library(zoo)
   library(purrr)
-  
+  library(readxl)
 })
 
 clusterEvalQ(cl, load("../DFM/data/vintages_gdp.Rda"))

@@ -20,6 +20,7 @@ library(tidyr)
 library(bundesbank)
 library(tibble)
 library(zoo)
+library(readxl)
 
 # FUNCTIONS ----
 #_____________________________________________________#
@@ -119,9 +120,9 @@ prepare_vintage <- function(vintage, date_h, sample_start = c("1992-01-01"),
       day = day(date),
       quarter = quarter(date)
     ) %>%
-    # 5. Filter data to be <= vintage by converting to the same format
+    # 4. Filter data to be <= vintage by converting to the same format
     filter(format(date, "%Y-%m-%d") <= vintage) %>%
-    # 4. Arrange columns
+    # 5. Arrange columns
     select(date, year, quarter, month, day, financial_1)
   
   # get rid of raw df
@@ -189,12 +190,26 @@ prepare_vintage <- function(vintage, date_h, sample_start = c("1992-01-01"),
   #}
   
   # Specify the range of i
-  i_values <- 2:5
+  i_values <- 4:5
   
   # Loop to load each Rda file
   for (i in i_values) {
     load(paste0("financial_", i, ".Rda"))
   }
+  
+  # Read Date and 5-year federal note yield into financial2 (using LSEG Datastream data for full sample coverage)
+  financial2 <- read_excel("Bond_yields.xlsx", col_types = c("date", "numeric", "skip"))
+  
+  # Rename columns: Date to date, 5-year yield to financial_2
+  financial2 <- financial2 %>%
+    rename(date = Date, financial_2 = `5year`)
+  
+  # Read Date and 10-year government bond yield into financial3 (using LSEG Datastream data for full sample coverage)
+  financial3 <- read_excel("Bond_yields.xlsx", col_types = c("date", "skip", "numeric"))
+  
+  # Rename columns: Date to date, 10-year yield to financial_3
+  financial3 <- financial3 %>%
+    rename(date = Date, financial_3 = `10year`)
   
   # Ensure all date columns are Date objects
   financial2$date <- as.Date(financial2$date, format = "%Y-%m-%d")
@@ -729,6 +744,7 @@ clusterEvalQ(cl, {
   library(bundesbank)
   library(tibble)
   library(zoo)
+  library(readxl)
   
 })
 
