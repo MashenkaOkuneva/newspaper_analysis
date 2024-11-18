@@ -17,6 +17,13 @@ library(quadprog)
 gdp_growth <- read.csv(file.path("../DFM/data", "gdp_growth.csv"), stringsAsFactors = FALSE)
 
 # Load CSVs with the forecasts (model 1)
+# Best-performing model
+#backcasts_m1 <- read.csv(file.path("../MIDAS", "backcasts_midas_ridge_10stable_2lags.csv"), header = FALSE, stringsAsFactors = FALSE)
+#nowcasts_m1 <- read.csv(file.path("../MIDAS","nowcasts_midas_ridge_10stable_2lags.csv"), header = FALSE, stringsAsFactors = FALSE)
+#forecasts_1step_m1 <- read.csv(file.path("../MIDAS", "forecasts_1step_midas_ridge_10stable_2lags.csv"), header = FALSE, stringsAsFactors = FALSE)
+#forecasts_2step_m1 <- read.csv(file.path("../MIDAS", "forecasts_2step_midas_ridge_10stable_2lags.csv"), header = FALSE, stringsAsFactors = FALSE)
+
+# Ridge (K=3)
 backcasts_m1 <- read.csv(file.path("../MIDAS", "backcasts_midas_ridge_10stable_2lags.csv"), header = FALSE, stringsAsFactors = FALSE)
 nowcasts_m1 <- read.csv(file.path("../MIDAS","nowcasts_midas_ridge_10stable_2lags.csv"), header = FALSE, stringsAsFactors = FALSE)
 forecasts_1step_m1 <- read.csv(file.path("../MIDAS", "forecasts_1step_midas_ridge_10stable_2lags.csv"), header = FALSE, stringsAsFactors = FALSE)
@@ -31,10 +38,17 @@ forecasts_m1 <- data.frame(
 )
 
 # Load CSVs with the forecasts (model 2)
-backcasts_m2 <- read.csv(file.path("../MIDAS", "backcasts_midas_lasso_2lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
-nowcasts_m2 <- read.csv(file.path("../MIDAS", "nowcasts_midas_lasso_2lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
-forecasts_1step_m2 <- read.csv(file.path("../MIDAS", "forecasts_1step_midas_lasso_2lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
-forecasts_2step_m2 <- read.csv(file.path("../MIDAS", "forecasts_2step_midas_lasso_2lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
+# Best-performing model
+#backcasts_m2 <- read.csv(file.path("../MIDAS", "backcasts_midas_lasso_2lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
+#nowcasts_m2 <- read.csv(file.path("../MIDAS", "nowcasts_midas_lasso_2lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
+#forecasts_1step_m2 <- read.csv(file.path("../MIDAS", "forecasts_1step_midas_lasso_2lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
+#forecasts_2step_m2 <- read.csv(file.path("../MIDAS", "forecasts_2step_midas_lasso_2lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
+
+# Ridge (K=3)
+backcasts_m2 <- read.csv(file.path("../MIDAS", "backcasts_midas_ridge_2lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
+nowcasts_m2 <- read.csv(file.path("../MIDAS", "nowcasts_midas_ridge_2lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
+forecasts_1step_m2 <- read.csv(file.path("../MIDAS", "forecasts_1step_midas_ridge_2lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
+forecasts_2step_m2 <- read.csv(file.path("../MIDAS", "forecasts_2step_midas_ridge_2lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
 
 # Combine all forecasts into a single dataframe
 forecasts_m2 <- data.frame(
@@ -45,7 +59,11 @@ forecasts_m2 <- data.frame(
 )
 
 # Load CSV with the forecast errors (model 2)
-fe_m2 <- read.csv(file.path("../MIDAS", "forecast_errors_midas_lasso_2lags_hard.csv"), header = TRUE, stringsAsFactors = FALSE)
+# Best-performing model
+#fe_m2 <- read.csv(file.path("../MIDAS", "forecast_errors_midas_lasso_2lags_hard.csv"), header = TRUE, stringsAsFactors = FALSE)
+
+# Ridge (K=3)
+fe_m2 <- read.csv(file.path("../MIDAS", "forecast_errors_midas_ridge_2lags_hard.csv"), header = TRUE, stringsAsFactors = FALSE)
 
 forecasts_dif = forecasts_m1-forecasts_m2
 
@@ -124,5 +142,9 @@ combined_errors <- data.frame(
 )
 
 # Save the combined errors to a CSV
+# Best-performing model
 #write.csv(combined_errors, file.path(current_dir, "forecast_errors_combination_midas_text_hard_10stable.csv"), row.names = FALSE)
-write.csv(combined_errors, file.path(current_dir, "forecast_errors_combination_midas_text_hard_10stable_equal.csv"), row.names = FALSE)
+#write.csv(combined_errors, file.path(current_dir, "forecast_errors_combination_midas_text_hard_10stable_equal.csv"), row.names = FALSE)
+
+# Ridge (K=3)
+write.csv(combined_errors, file.path(current_dir, "forecast_errors_combination_midas_text_hard_10stable_ridge_3_equal.csv"), row.names = FALSE)
