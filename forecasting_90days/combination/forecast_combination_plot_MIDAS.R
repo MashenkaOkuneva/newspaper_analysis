@@ -13,9 +13,15 @@ library(quadprog)
 gdp_growth <- read.csv(file.path("../DFM/data", "gdp_growth.csv"), stringsAsFactors = FALSE)
 
 # Load CSVs with the forecasts (model 1)
-nowcasts_m1 <- read.csv(file.path("../MIDAS","nowcasts_midas_pca_10stable_2lags.csv"), header = FALSE, stringsAsFactors = FALSE)
-forecasts_1step_m1 <- read.csv(file.path("../MIDAS", "forecasts_1step_midas_pca_10stable_2lags.csv"), header = FALSE, stringsAsFactors = FALSE)
-forecasts_2step_m1 <- read.csv(file.path("../MIDAS", "forecasts_2step_midas_pca_10stable_2lags.csv"), header = FALSE, stringsAsFactors = FALSE)
+# Best-performing model
+#nowcasts_m1 <- read.csv(file.path("../MIDAS","nowcasts_midas_pca_10stable_2lags.csv"), header = FALSE, stringsAsFactors = FALSE)
+#forecasts_1step_m1 <- read.csv(file.path("../MIDAS", "forecasts_1step_midas_pca_10stable_2lags.csv"), header = FALSE, stringsAsFactors = FALSE)
+#forecasts_2step_m1 <- read.csv(file.path("../MIDAS", "forecasts_2step_midas_pca_10stable_2lags.csv"), header = FALSE, stringsAsFactors = FALSE)
+
+# Ridge (K=3)
+nowcasts_m1 <- read.csv(file.path("../MIDAS","nowcasts_midas_ridge_10stable_2lags.csv"), header = FALSE, stringsAsFactors = FALSE)
+forecasts_1step_m1 <- read.csv(file.path("../MIDAS", "forecasts_1step_midas_ridge_10stable_2lags.csv"), header = FALSE, stringsAsFactors = FALSE)
+forecasts_2step_m1 <- read.csv(file.path("../MIDAS", "forecasts_2step_midas_ridge_10stable_2lags.csv"), header = FALSE, stringsAsFactors = FALSE)
 
 # Combine all forecasts into a single dataframe
 forecasts_m1 <- data.frame(
@@ -25,9 +31,15 @@ forecasts_m1 <- data.frame(
 )
 
 # Load CSVs with the forecasts (model 2)
-nowcasts_m2 <- read.csv(file.path("../MIDAS", "nowcasts_midas_ridge_1lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
-forecasts_1step_m2 <- read.csv(file.path("../MIDAS", "forecasts_1step_midas_ridge_1lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
-forecasts_2step_m2 <- read.csv(file.path("../MIDAS", "forecasts_2step_midas_ridge_1lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
+# Best-performing model
+#nowcasts_m2 <- read.csv(file.path("../MIDAS", "nowcasts_midas_ridge_1lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
+#forecasts_1step_m2 <- read.csv(file.path("../MIDAS", "forecasts_1step_midas_ridge_1lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
+#forecasts_2step_m2 <- read.csv(file.path("../MIDAS", "forecasts_2step_midas_ridge_1lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
+
+# Ridge (K=3)
+nowcasts_m2 <- read.csv(file.path("../MIDAS", "nowcasts_midas_ridge_2lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
+forecasts_1step_m2 <- read.csv(file.path("../MIDAS", "forecasts_1step_midas_ridge_2lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
+forecasts_2step_m2 <- read.csv(file.path("../MIDAS", "forecasts_2step_midas_ridge_2lags_hard.csv"), header = FALSE, stringsAsFactors = FALSE)
 
 # Combine all forecasts into a single dataframe
 forecasts_m2 <- data.frame(
@@ -37,7 +49,11 @@ forecasts_m2 <- data.frame(
 )
 
 # Load CSV with the forecast errors (model 2)
-fe_m2 <- read.csv(file.path("../MIDAS", "forecast_errors_midas_ridge_1lags_hard.csv"), header = TRUE, stringsAsFactors = FALSE)
+# Best-performing model
+#fe_m2 <- read.csv(file.path("../MIDAS", "forecast_errors_midas_ridge_1lags_hard.csv"), header = TRUE, stringsAsFactors = FALSE)
+
+# Ridge (K=3)
+fe_m2 <- read.csv(file.path("../MIDAS", "forecast_errors_midas_ridge_2lags_hard.csv"), header = TRUE, stringsAsFactors = FALSE)
 
 forecasts_dif = forecasts_m1-forecasts_m2
 
@@ -119,6 +135,12 @@ generate_plot <- function(data, title_str, file_name) {
 }
 
 # Generate plots for each dataframe
-generate_plot(nowcasts, "Nowcasts vs. GDP Growth", "nowcasts_plot_combination_midas_text_hard_10stable_equal.pdf")
-generate_plot(forecasts_1step, "One-step-ahead Forecasts vs. GDP Growth", "forecasts_1step_plot_combination_midas_text_hard_10stable_equal.pdf")
-generate_plot(forecasts_2step, "Two-step-ahead Forecasts vs. GDP Growth", "forecasts_2step_plot_combination_midas_text_hard_10stable_equal.pdf")
+# Best-performing model
+#generate_plot(nowcasts, "Nowcasts vs. GDP Growth", "nowcasts_plot_combination_midas_text_hard_10stable_equal.pdf")
+#generate_plot(forecasts_1step, "One-step-ahead Forecasts vs. GDP Growth", "forecasts_1step_plot_combination_midas_text_hard_10stable_equal.pdf")
+#generate_plot(forecasts_2step, "Two-step-ahead Forecasts vs. GDP Growth", "forecasts_2step_plot_combination_midas_text_hard_10stable_equal.pdf")
+
+# Ridge (K=3)
+generate_plot(nowcasts, "Nowcasts vs. GDP Growth", "nowcasts_plot_combination_midas_text_hard_10stable_ridge_3_equal.pdf")
+generate_plot(forecasts_1step, "One-step-ahead Forecasts vs. GDP Growth", "forecasts_1step_plot_combination_midas_text_hard_10stable_ridge_3_equal.pdf")
+generate_plot(forecasts_2step, "Two-step-ahead Forecasts vs. GDP Growth", "forecasts_2step_plot_combination_midas_text_hard_10stable_ridge_3_equal.pdf")
