@@ -36,7 +36,7 @@ perform_forecast <- function(data, nlag, p, mon, forecast_indicator) {
   
   # PCA based on EM algorithm following Stock and Watson (2002).
   #pca <- f_emalg(scale(topics), Nr_max = 10, Niter = 50, ic = "PC_p1",  print_iter = TRUE)
-  # Manually set number of factors to 2!
+  # Manually set number of factors to 1!
   pca <- f_emalg(scale(topics), Nr_max = 1, Niter = 50, ic = "none",  print_iter = TRUE)
   
   num_pcs <- ncol(pca$f)
