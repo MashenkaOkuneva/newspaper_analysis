@@ -184,22 +184,27 @@ transform_to_freq <- function(file, sample_start = c("1992-01-01"), K = 30, bw =
 topics_sign <- transform_to_freq(
   file = "./topics/sign_adjusted_daily_topics_format.csv"
 )
+# drop every obs whose year is 2008 or 2009
+topics_sign_q_nc <- topics_sign$quarterly %>% filter(! year %in% c(2008, 2009))
 
 # original topics
 topics_orig <- transform_to_freq(
   file          = "./topics/daily_topics.csv"
 )
+# drop every obs whose year is 2008 or 2009
+topics_orig_q_nc <- topics_orig$quarterly %>% filter(! year %in% c(2008, 2009))
 
 # BPW-adjusted topics
 topics_bpw <- transform_to_freq(
   file = "./topics/BPW_adjusted_daily_topics.csv"
 )
+# drop every obs whose year is 2008 or 2009
+topics_bpw_q_nc  <- topics_bpw$quarterly  %>% filter(! year %in% c(2008, 2009))
 
-# BPW-adjusted topics
+# original topics estimated on all articles
 topics_all <- transform_to_freq(
   file = "./topics/daily_topics_all_articles.csv"
 )
-
 
 # CORRELATION ANALYSIS ----
 # Compute correlations of every topic with quarterly GDP growth (return the top 20 by absolute correlation),
@@ -559,6 +564,7 @@ make_corr_table(
 
 # COMPUTE & MERGE CORRELATIONS FOR SELECTED TOPICS ----
 
+# WITH CRISIS #
 # (a) sign-adjusted (BCC) correlations
 corr_sign <- gdp_corr_selected %>% rename(BCC = GDP) %>%
   arrange(desc(abs(BCC)))
@@ -585,7 +591,38 @@ df_corr_compare <- corr_sign %>%
   left_join(corr_orig, by = "topic") %>%
   left_join(corr_bpw, by = "topic")
 
-# WRITE OUT A LaTeX TABLE
+# WITHOUT CRISIS #
+# (a) sign-adjusted (BCC) correlations, no-crisis
+corr_sign_nc <- calc_topic_corr(
+  file            = "../../AR1/gdp_growth_actual.csv",
+  econ_var        = "d_gdp",
+  topics_df       = topics_sign_q_nc,
+  selected_topics = selected_topics
+) %>% rename(BCC = GDP) %>%
+  arrange(desc(abs(BCC)))
+
+# (b) original-topics correlations, no-crisis
+corr_orig_nc <- calc_topic_corr(
+  file            = "../../AR1/gdp_growth_actual.csv",
+  econ_var        = "d_gdp",
+  topics_df       = topics_orig_q_nc,
+  selected_topics = selected_topics
+) %>% rename(Original = GDP)
+
+# (c) BPW-adjusted correlations, no-crisis
+corr_bpw_nc <- calc_topic_corr(
+  file            = "../../AR1/gdp_growth_actual.csv",
+  econ_var        = "d_gdp",
+  topics_df       = topics_bpw_q_nc,
+  selected_topics = selected_topics
+) %>% rename(BPW = GDP)
+
+# join using corr_sign_nc as the driver (so the order is its order)
+df_corr_compare_nc <- corr_sign_nc %>%
+  left_join(corr_orig_nc, by = "topic") %>%
+  left_join(corr_bpw_nc,  by = "topic")
+
+# WRITE OUT A LaTeX TABLE (WITH CRISIS)
 
 topic_labels <- c(
   T27   = "\\makecell[tc]{ Economic Crises \\\\ and Recessions}",
@@ -626,6 +663,48 @@ tex_tab <- df_corr_compare %>%
 
 # write to disk
 writeLines(tex_tab, file.path("correlations_different_approaches", "correlations_different_approaches.tex"))
+
+# WRITE OUT A LaTeX TABLE (WITH AND WITHOUT CRISIS)
+# full‐sample
+df_full <- corr_sign %>% rename(BCC_with = BCC) %>%
+  left_join(corr_orig   %>% rename(Original_with = Original), by="topic") %>%
+  left_join(corr_bpw    %>% rename(BPW_with      = BPW),      by="topic")
+
+# no-crisis
+df_nc   <- corr_sign_nc %>% rename(BCC_no = BCC) %>%
+  left_join(corr_orig_nc %>% rename(Original_no = Original), by="topic") %>%
+  left_join(corr_bpw_nc  %>% rename(BPW_no      = BPW),      by="topic")
+
+df_combined <- df_full %>%
+  left_join(df_nc, by="topic") %>%
+  mutate(ID    = topic, Label = topic_labels[topic]
+  ) %>%
+  select(ID, Label,
+         BCC_with,  BCC_no,
+         Original_with, Original_no,
+         BPW_with,      BPW_no)
+
+if (!dir.exists("correlations_different_approaches")) dir.create("correlations_different_approaches")
+
+tex_tab <- df_combined %>%
+  kable(
+    format   = "latex",
+    booktabs = TRUE,
+    escape    = FALSE,
+    caption   = "Correlations of topics, sign-adjusted topics (BCC), and BPW-adjusted topics (BPW) with annualized q-o-q GDP growth (first release): with and without Financial Crisis (2008-2009)",
+    col.names = c(
+      "ID", "Label",
+      "BCC",    "BCC (no crisis)",
+      "Original", "Original (no crisis)",
+      "BPW",    "BPW (no crisis)"
+    ),
+    align = c("l","l", rep("r", 6))
+  ) %>%
+  kable_styling(latex_options = c("hold_position", "scale_down")) %>%
+  as.character()
+
+# write to disk
+writeLines(tex_tab, file.path("correlations_different_approaches", "correlations_different_approaches_with_and_without_crisis.tex"))
 
 # CORRELATIONS FOR TOPICS ESTIMATED ON ALL ARTICLES ----
 
