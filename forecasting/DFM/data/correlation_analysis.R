@@ -205,6 +205,8 @@ topics_bpw_q_nc  <- topics_bpw$quarterly  %>% filter(! year %in% c(2008, 2009))
 topics_all <- transform_to_freq(
   file = "./topics/daily_topics_all_articles.csv"
 )
+# drop every obs whose year is 2008 or 2009
+topics_all_q_nc <- topics_all$quarterly %>% filter(! year %in% c(2008, 2009))
 
 # CORRELATION ANALYSIS ----
 # Compute correlations of every topic with quarterly GDP growth (return the top 20 by absolute correlation),
@@ -466,7 +468,7 @@ make_corr_table <- function(
   } else if (topic_type == "topics_BPW") {
     sprintf("  \\caption{Sentiment-adjusted Topics (BPW) Most Correlated with %s and Selected Surveys}\n", econ_var)
   } else if (topic_type == "topics_bcc") {
-    sprintf("  \\caption{Sign-adjusted Topics (BCC) Most Correlated with %s and Selected Surveys}\n", econ_var)
+    sprintf("  \\caption{Sign-adjusted Topics (BCC) Most Correlated with %s (First Release) and Selected Surveys}\n", econ_var)
   } else {
     sprintf("  \\caption{%s Most Correlated with %s and Selected Surveys}\n",
             topic_type, econ_var)
@@ -561,6 +563,192 @@ make_corr_table(
   source              = "all"
 )
 
+# ECONOMIC INDICATORS ----
+# Load economic indicators
+econ_indicators <- read_excel("Economic_indicators.xlsx") %>%
+  rename(
+    Manuf_MV   = `Manufacturing_motor_vehicles`,
+    ifo_EB     = `ifo_employment_barometer`,
+    ifo_EB_man = `ifo_EB_manufacturing`,
+    ifo_auto_exp = `ifo_auto_exp`,
+    ifo_auto_current = `ifo_auto_current`,
+    ifo_auto_climate = `ifo_auto_climate`
+  )
+
+indicator_vars <- setdiff(names(econ_indicators), "date")
+
+# Given a variable name, merge an economic indicator with the topics data 
+# and compute correlations for each topic column.
+calc_topic_corr_monthly_indicators <- function(econ_indicators_df, econ_indicators_var, topics_df) {
+  
+  # Merge topics and economic indicator on date 
+  merged <- topics_df %>% inner_join(econ_indicators_df, by = "date")
+  
+  # Ensure the indicator variable column is numeric
+  merged[[econ_indicators_var]] <- as.numeric(as.character(merged[[econ_indicators_var]]))
+  
+  # Identify topic columns (topics start with "T")
+  topic_cols <- names(merged)[grepl("^T", names(merged))]
+  
+  # Compute correlation for each topic with the given economic indicator
+  corr_df <- lapply(topic_cols, function(topic) {
+    corr_val <- cor(merged[[topic]], merged[[econ_indicators_var]], use = "complete.obs")
+    data.frame(topic = topic, corr = corr_val)
+  }) %>% bind_rows()
+  
+  # Sort by absolute correlation
+  corr_df <- corr_df %>% arrange(desc(abs(corr)))
+  
+  return(corr_df)
+}
+
+# Compute correlations for each of the three indicators
+
+# Create correlation dfs for each of the economic indicators
+for(iv in indicator_vars) {
+  df_name <- paste0(iv, "_corr")
+  # Calculate the correlation 
+  corr_df <- calc_topic_corr_monthly_indicators(econ_indicators_df = econ_indicators, econ_indicators_var = iv,
+                                                topics_df  = topics_sign$monthly
+  )
+  assign(df_name, corr_df)
+}
+
+indicators_corr_list <- list()
+for(iv in indicator_vars) {
+  # Calculate the correlation 
+  corr_df <- calc_topic_corr_monthly_indicators(econ_indicators_df = econ_indicators, econ_indicators_var = iv,
+    topics_df  = topics_sign$monthly
+  ) %>%
+    # Rename the 'corr' column to the variable name
+    rename(!!iv := corr)
+  # Store in the list 
+  indicators_corr_list[[iv]] <- corr_df
+}
+
+# Combine correlations of GDP and economic indicators
+# Only a selected set of topics
+final_corr_econ_indicators <- reduce(indicators_corr_list, full_join, .init = gdp_corr_selected, by = "topic") 
+
+# Define topic labels
+topic_labels <- c(
+  "T27"  = "\\makecell[tc]{ Economic Crises \\\\ and Recessions}",
+  "T127" = "\\makecell[tc]{ Major Banks and \\\\ Investment Banking}",
+  "T11"  = "Mergers and Acquisitions",
+  "T81"  = "\\makecell[tc]{ Corporate Restructuring and \\\\ Job Cuts in Germany}",
+  "T77"  = "Private Investment",
+  "T74" = "\\makecell[tc]{ Concerns about Economic\\\\ Bubbles and Recessions}",
+  "T52"  = "\\makecell[tc]{ German Automobile Industry \\\\ and Major Manufacturers}",
+  "T131" = "\\makecell[tc]{German Investments in \\\\ Emerging Markets}",
+  "T138" = "\\makecell[tc]{ Financial and Economic \\\\ Performance}",
+  "T100"  = "\\makecell[tc]{ Market Reactions to \\\\News}"
+)
+
+# Build the dataframe of correlations
+df_indicators <- final_corr_econ_indicators %>%
+  arrange(desc(abs(GDP))) %>%
+  slice(1:10) %>%
+  mutate(RawLabel = topic_labels[topic]) %>%
+  rowwise() %>%
+  mutate(
+    Label = if (str_detect(RawLabel, "\\\\makecell\\[tc\\]")) {
+      # makecell[tc] -> makecell[tl]
+      str_replace(RawLabel, "\\\\makecell\\[tc\\]\\{", "\\\\makecell[tl]{")
+    } else {
+      RawLabel
+    }
+  ) %>%
+  ungroup() %>%
+  mutate(across(all_of(c("GDP", indicator_vars)), ~ round(.,3))) %>%
+  select(
+    ID = topic,
+    Label = Label,
+    all_of(indicator_vars)
+  )
+
+# Figure out how many right‐aligned 'r' columns
+n_nums <- ncol(df_indicators) - 2
+
+# Grab raw LaTeX tabular from kable()
+raw_tab <- df_indicators %>%
+  kable(
+    format   = "latex",
+    booktabs = TRUE,
+    escape   = FALSE,
+    align    = c("l","l", rep("r", n_nums)),
+    col.names= c("ID", "Label",
+                 "Manuf\\_MV", "EB", "EB\\_man",
+                 "auto\\_exp", "auto\\_current", "auto\\_climate")
+  ) %>%
+  as.character()
+
+# Replace booktabs rules with \hline
+raw_tab <- gsub("\\\\toprule",    "\\\\hline", raw_tab)
+raw_tab <- gsub("\\\\midrule",    "\\\\hline", raw_tab)
+raw_tab <- gsub("\\\\bottomrule", "\\\\hline", raw_tab)
+
+# Build dynamic footnote definitions
+defs <- list(
+  Manuf_MV   = "Manufacturing of motor vehicles, trailers, and semi-trailers (Source: Destatis)",
+  ifo_EB     = "ifo Employment Barometer (index)",
+  ifo_EB_man = "ifo Employment Barometer for manufacturing (balances)",
+  ifo_auto_exp = "ifo Business Expectations for the automotive industry",
+  ifo_auto_current = "ifo Assessment of the Current Situation for the automotive industry",
+  ifo_auto_climate = "ifo Business Climate for the automotive industry"
+)
+
+indicator_renames <- c(
+  Manuf_MV    = "Manuf\\_MV",
+  ifo_EB      = "EB",
+  ifo_EB_man  = "EB\\_man",
+  ifo_auto_exp = "auto\\_exp",
+  ifo_auto_current = "auto\\_current",
+  ifo_auto_climate = "auto\\_climate"
+)
+
+foot_items <- vapply(
+  indicator_vars,
+  function(iv) paste0("‘", indicator_renames[iv], "’ = ", defs[[iv]]),
+  character(1)
+)
+
+caption_text <- sprintf("  \\caption{Correlations of Sign-adjusted Topics (BCC) with Selected Economic Indicators}\n")
+
+label_text <- sprintf(
+  "  \\label{tab:cor_gdp_topics_bcc_2009_200_all_economic_indicators}\n"
+)
+
+footnote_text <- paste0(
+  "Note: ", 
+  paste(foot_items, collapse="; "), "."
+)
+
+# Assemble final .tex
+full_tex <- paste0(
+  "\\begin{table}[h!]\n",
+  "  \\centering\n",
+  "  \\begin{threeparttable}\n",
+  "    \\scriptsize\n",
+  "    \\renewcommand{\\arraystretch}{1.3}\n",
+  caption_text,
+  label_text, "\n",
+  paste(raw_tab, collapse = "\n"), "\n\n",
+  "    \\begin{tablenotes}[flushleft]\n",
+  "      \\small \\item ", footnote_text, "\n",
+  "    \\end{tablenotes}\n",
+  "  \\end{threeparttable}\n",
+  "\\end{table}\n"
+)
+
+# Write it out
+
+# Build the output path
+output_file <- file.path(
+  "correlations_different_approaches",
+  "correlations_topics_gdp_and_indicators.tex"
+)
+
+writeLines(full_tex, output_file)
 
 # COMPUTE & MERGE CORRELATIONS FOR SELECTED TOPICS ----
 
@@ -624,27 +812,15 @@ df_corr_compare_nc <- corr_sign_nc %>%
 
 # WRITE OUT A LaTeX TABLE (WITH CRISIS)
 
-topic_labels <- c(
-  T27   = "\\makecell[tc]{ Economic Crises \\\\ and Recessions}",
-  T127  = "\\makecell[tc]{ Major Banks and \\\\ Investment Banking}",
-  T11   = "Mergers and Acquisitions",
-  T81   = "\\makecell[tc]{ Corporate Restructuring and \\\\ Job Cuts in Germany}",
-  T77   = "Private Investment",
-  T74   = "\\makecell[tc]{ Concerns about Economic\\\\ Bubbles and Recessions}",
-  T52   = "\\makecell[tc]{ German Automobile Industry \\\\ and Major Manufacturers}",
-  T131  = "\\makecell[tc]{German Investments in \\\\ Emerging Markets}",
-  T138  = "\\makecell[tc]{ Financial and Economic \\\\ Performance}",
-  T100  = "\\makecell[tc]{ Market Reactions to \\\\News}"
-)
-
 # switch all \makecell[tc] to \makecell[tl]
 topic_labels <- purrr::map_chr(
   topic_labels,
   ~ stringr::str_replace_all(.x, "\\\\makecell\\[tc\\]", "\\\\makecell[tl]")
 )
 
-
 df_corr_compare <- df_corr_compare %>%
+  # round all correlation coefficients to 3 decimals
+  mutate(across(c(BCC, Original, BPW), ~ round(., 3))) %>%
   mutate(ID = topic, Label = topic_labels[topic]) %>%
   select(ID, Label, BCC, Original, BPW)
 
@@ -655,8 +831,13 @@ tex_tab <- df_corr_compare %>%
     format   = "latex",
     booktabs = TRUE,
     escape    = FALSE,
-    caption   = "Correlations of topics, sign-adjusted topics (BCC), and BPW-adjusted topics (BPW) with annualized q-o-q GDP growth (first release)",
-    col.names = c("ID", "Label", "BCC", "Original", "BPW")
+    caption = paste0(
+      "Correlations of sign-adjusted topics (BCC), topics (Original), and BPW-adjusted topics (BPW) ",
+      "with annualized q-o-q GDP growth (first release) ",
+      "\\label{tab:cor_gdp_different_approaches}"
+    ),
+    col.names = c("ID", "Label", "BCC", "Original", "BPW"),
+    align     = c("l","l", rep("r", 3))
   ) %>%
   kable_styling(latex_options="hold_position") %>%
   as.character()
@@ -677,6 +858,12 @@ df_nc   <- corr_sign_nc %>% rename(BCC_no = BCC) %>%
 
 df_combined <- df_full %>%
   left_join(df_nc, by="topic") %>%
+  mutate(across(
+    c(BCC_with, BCC_no,
+      Original_with, Original_no,
+      BPW_with, BPW_no),
+    ~ round(., 3)
+  )) %>%
   mutate(ID    = topic, Label = topic_labels[topic]
   ) %>%
   select(ID, Label,
@@ -691,12 +878,17 @@ tex_tab <- df_combined %>%
     format   = "latex",
     booktabs = TRUE,
     escape    = FALSE,
-    caption   = "Correlations of topics, sign-adjusted topics (BCC), and BPW-adjusted topics (BPW) with annualized q-o-q GDP growth (first release): with and without Financial Crisis (2008-2009)",
+    caption = paste0(
+      "Correlations of sign-adjusted topics (BCC), topics (Original), and BPW-adjusted topics (BPW) ",
+      "with annualized q-o-q GDP growth (first release): with and without (NC) Financial Crisis (2008-2009)} ",
+      "\\label{cor_gdp_different_approaches_crisis} ",
+      "\\renewcommand{\\arraystretch}{1.3"
+    ),
     col.names = c(
       "ID", "Label",
-      "BCC",    "BCC (no crisis)",
-      "Original", "Original (no crisis)",
-      "BPW",    "BPW (no crisis)"
+      "BCC",    "BCC\\_NC",
+      "Original", "Original\\_NC",
+      "BPW",    "BPW\\_NC"
     ),
     align = c("l","l", rep("r", 6))
   ) %>%
@@ -712,6 +904,20 @@ writeLines(tex_tab, file.path("correlations_different_approaches", "correlations
 corr_all <- gdp_corr_all %>% rename(Original_all = GDP) %>%
   arrange(desc(abs(Original_all))) %>%
   slice(1:10)
+
+# Without crisis
+selected_topics_all <- c("T13", "T197", "T12", "T9", "T43", 
+                     "T2", "T20", "T44", "T109", "T62")
+corr_all_nc <- calc_topic_corr(
+  file            = "../../AR1/gdp_growth_actual.csv",
+  econ_var        = "d_gdp",
+  topics_df       = topics_all_q_nc,
+  selected_topics = selected_topics_all
+) %>%
+  rename(Original_all_nc = GDP)
+
+corr_all_combined <- corr_all %>%
+  left_join(corr_all_nc, by = "topic")
 
 # WRITE OUT A LaTeX TABLE
 
@@ -734,20 +940,32 @@ topic_labels <- purrr::map_chr(
   ~ stringr::str_replace_all(.x, "\\\\makecell\\[tc\\]", "\\\\makecell[tl]")
 )
 
-
-corr_all <- corr_all %>%
-  mutate(ID = topic, Label = topic_labels[topic]) %>%
-  select(ID, Label, Original_all)
+corr_all_combined <- corr_all_combined %>%
+  mutate(
+    ID = topic,
+    Label = topic_labels[topic],
+    Original_all    = round(Original_all, 3),
+    Original_all_nc = round(Original_all_nc, 3)
+  ) %>%
+  select(ID, Label, Original_all, Original_all_nc)
 
 if (!dir.exists("correlations_different_approaches")) dir.create("correlations_different_approaches")
 
-tex_tab <- corr_all %>%
+tex_tab <- corr_all_combined %>%
   kable(
     format   = "latex",
     booktabs = TRUE,
     escape    = FALSE,
-    caption   = "Correlations of topics estimated on all articles with annualized q-o-q GDP growth (first release)",
-    col.names = c("ID", "Label", "Original (all articles)")
+    caption = paste0(
+      "Correlations of topics (Original) estimated on all articles with annualized q-o-q GDP growth ",
+      "(first release): full sample and without (NC) Financial Crisis (2008–2009) ",
+      "\\label{cor_gdp_topics_all_articles}"
+    ),
+    col.names = c(
+      "ID", "Label",
+      "Original (all articles)",
+      "Original\\_NC"
+    )
   ) %>%
   kable_styling(latex_options="hold_position") %>%
   as.character()
