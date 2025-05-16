@@ -9,6 +9,7 @@ library(purrr)
 library(knitr)
 library(kableExtra)
 library(stringr)
+library(zoo)
 
 # FUNCTIONS ----
 #_____________________________________________________#
@@ -575,6 +576,26 @@ econ_indicators <- read_excel("Economic_indicators.xlsx") %>%
     ifo_auto_climate = `ifo_auto_climate`
   )
 
+# Build a quarterly 'Manuf_MV' series by averaging the three monthly values
+Manuf_MV_q <- econ_indicators %>%
+  mutate(my = as.yearmon(date, format = "%m/%Y"), quarter = as.yearqtr(my)) %>%
+  group_by(quarter) %>%
+  summarise(
+    Manuf_MV_avg = mean(Manuf_MV, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(quarter) %>%
+  # Compute q-o-q growth on the quarter averages
+  mutate(
+    qoq_Manuf_MV = (Manuf_MV_avg / lag(Manuf_MV_avg) - 1) * 100
+  ) %>%
+  filter(!is.na(qoq_Manuf_MV)) %>%
+  # Convert back to a date at quarter-end to join with the quarterly topics
+  mutate(
+    date = format(as.Date(quarter, frac = 1), "%Y-%m")
+  ) %>%
+  select(date, qoq_Manuf_MV)
+
 indicator_vars <- setdiff(names(econ_indicators), "date")
 
 # Given a variable name, merge an economic indicator with the topics data 
@@ -614,6 +635,12 @@ for(iv in indicator_vars) {
   assign(df_name, corr_df)
 }
 
+Manuf_MV_corr <- calc_topic_corr_monthly_indicators(
+  econ_indicators_df  = Manuf_MV_q,             
+  econ_indicators_var = "qoq_Manuf_MV",       
+  topics_df           = topics_sign$quarterly
+)
+
 indicators_corr_list <- list()
 for(iv in indicator_vars) {
   # Calculate the correlation 
@@ -625,6 +652,14 @@ for(iv in indicator_vars) {
   # Store in the list 
   indicators_corr_list[[iv]] <- corr_df
 }
+
+indicators_corr_list[["Manuf_MV"]] <- 
+  calc_topic_corr_monthly_indicators(
+    econ_indicators_df  = Manuf_MV_q,             
+    econ_indicators_var = "qoq_Manuf_MV",        
+    topics_df           = topics_sign$quarterly 
+  ) %>%
+  rename(Manuf_MV = corr) 
 
 # Combine correlations of GDP and economic indicators
 # Only a selected set of topics
