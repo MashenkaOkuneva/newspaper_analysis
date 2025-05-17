@@ -261,6 +261,57 @@ gdp_corr_selected <- calc_topic_corr("../../AR1/gdp_growth_actual.csv", topics_d
 # 3. Top 20 topics estimated on all articles by absolute correlation with GDP
 gdp_corr_all <- calc_topic_corr("../../AR1/gdp_growth_actual.csv", topics_df = topics_all$quarterly, econ_var = "d_gdp")
 
+# Quarterly correlations with GDP growth + statistical significance, for a selected set of topics
+calc_topic_corr_gdp_sig <- function(file, econ_var, topics_df, selected_topics, nw_lag = 4) {
+  # Bring "YYYY-MM-DD" -> "YYYY-MM" for merging
+  gdp <- read.csv(file, stringsAsFactors = FALSE) %>%
+    mutate(date = substr(date, 1, 7))
+  
+  topics_df <- topics_df %>% ungroup()
+  
+  # Merge topics and GDP series on date
+  merged <- inner_join(topics_df, gdp, by = "date")
+  
+  # Identify topic columns (topics start with "T")
+  topic_cols <- grep("^T", names(merged), value = TRUE)
+  
+  # Restrict to "selected_topics"
+  topic_cols <- intersect(topic_cols, selected_topics)
+  
+  # Compute correlation for each topic
+  map_dfr(topic_cols, function(topic) {
+    # Pick non‐missing obs
+    df <- merged %>%
+      select(y = all_of(econ_var), x = all_of(topic)) %>%
+      filter(!is.na(x) & !is.na(y))
+    
+    # OLS fit
+    fit    <- lm(y ~ x, data = df)
+    # HAC cov matrix up to lag=4
+    vcovNW <- NeweyWest(fit, lag = nw_lag, prewhite = FALSE)
+    
+    b      <- coef(fit)["x"]
+    se_nw  <- sqrt(vcovNW["x","x"])
+    tval   <- b / se_nw
+    df_res <- df.residual(fit)
+    pval   <- 2 * pt(abs(tval), df = df_res, lower.tail = FALSE)
+    stars  <- symnum(pval,
+                     corr      = FALSE,
+                     cutpoints = c(0, .01, .05, .1, 1),
+                     symbols   = c("***","**","*",""))
+    
+    tibble(
+      topic   = topic,
+      corr    = cor(df$x, df$y, use = "complete.obs"),
+      #beta    = b,
+      #t_NW    = tval,
+      #p_NW    = pval,
+      signif  = stars
+    )
+  }) %>%
+    arrange(desc(abs(corr)))
+}
+  
 ## SURVEYS ##
 # Load surveys data and variable definitions
 surveys <- read_excel("Surveys.xlsx") %>%
@@ -769,7 +820,7 @@ make_corr_table_q <- function(
       format   = "latex",
       booktabs = TRUE,
       escape   = FALSE,
-      align    = c("l","l", rep("r", n_nums)),
+      align    = c("l","l", rep("c", n_nums)),
       col.names= new_names
     ) %>%
     as.character()
@@ -1248,7 +1299,7 @@ make_corr_table_q_EI <- function(
     "T100"  = "\\makecell[tc]{ Market Reactions to \\\\News}"
   )
   
-  # 2) build the dataframe of top correlations
+  # 2) Build the dataframe of top correlations
   df <- corr_df %>%
     select(
       topic,
@@ -1357,7 +1408,7 @@ make_corr_table_q_EI <- function(
       format   = "latex",
       booktabs = TRUE,
       escape   = FALSE,
-      align    = c("l","l", rep("r", n_nums)),
+      align    = c("l","l", rep("c", n_nums)),
       col.names= new_names
     ) %>%
     as.character()
@@ -1502,6 +1553,52 @@ df_corr_compare <- corr_sign %>%
   left_join(corr_orig, by = "topic") %>%
   left_join(corr_bpw, by = "topic")
 
+# WITH CRISIS (ADD SIGNIFICANCE) #
+# (a) sign-adjusted (BCC) correlations
+corr_sign_sig <- calc_topic_corr_gdp_sig(
+  file            = "../../AR1/gdp_growth_actual.csv",
+  econ_var        = "d_gdp",
+  topics_df       = topics_sign$quarterly,
+  selected_topics = selected_topics,
+  nw_lag          = 4
+) %>% rename(BCC_corr = corr, BCC_star = signif)
+
+# (b) original-topics correlations
+corr_orig_sig <- calc_topic_corr_gdp_sig(
+  file            = "../../AR1/gdp_growth_actual.csv",
+  econ_var        = "d_gdp",
+  topics_df       = topics_orig$quarterly,
+  selected_topics = selected_topics,
+  nw_lag          = 4
+) %>% rename(Original_corr = corr, Original_star = signif)
+
+# (c) sentiment-adjusted (BPW) correlations
+corr_bpw_sig <- calc_topic_corr_gdp_sig(
+  file            = "../../AR1/gdp_growth_actual.csv",
+  econ_var        = "d_gdp",
+  topics_df       = topics_bpw$quarterly,
+  selected_topics = selected_topics,
+  nw_lag          = 4
+) %>% rename(BPW_corr = corr, BPW_star = signif)
+
+topic_labels <- purrr::map_chr(
+  topic_labels,
+  ~ stringr::str_replace_all(.x, "\\\\makecell\\[tc\\]", "\\\\makecell[tl]")
+)
+
+# join using corr_sign_sig as the driver (so the order is its order)
+df_corr_compare_sig <- corr_sign_sig %>%
+  left_join(corr_orig_sig, by = "topic") %>%
+  left_join(corr_bpw_sig,  by = "topic") %>%
+  mutate(
+    BCC      = paste0(sprintf("%0.3f", BCC_corr),    BCC_star),
+    Original = paste0(sprintf("%0.3f", Original_corr), Original_star),
+    BPW      = paste0(sprintf("%0.3f", BPW_corr),    BPW_star),
+    ID       = topic,
+    Label    = topic_labels[topic]
+  ) %>%
+  select(ID, Label, BCC, Original, BPW)
+
 # WITHOUT CRISIS #
 # (a) sign-adjusted (BCC) correlations, no-crisis
 corr_sign_nc <- calc_topic_corr(
@@ -1567,6 +1664,39 @@ tex_tab <- df_corr_compare %>%
 
 # write to disk
 writeLines(tex_tab, file.path("correlations_different_approaches", "correlations_different_approaches.tex"))
+
+# WRITE OUT A LaTeX TABLE (WITH CRISIS, ADD SIGNIFICANCE)
+tex_tab <- df_corr_compare_sig %>%
+  kable(
+    format   = "latex",
+    booktabs = TRUE,
+    escape   = FALSE,
+    col.names= c("ID","Label","BCC","Original","BPW"),
+    align    = c("l","l","c","c","c")
+  ) %>%
+  as.character()
+
+full_tex <- paste0(
+  "\\begin{table}[h!]\n",
+  "  \\centering\n",
+  "  \\caption{Correlations of sign-adjusted topics (BCC), topics (Original), and BPW-adjusted topics (BPW) with annualized q-o-q GDP growth (first release)}\n",
+  "  \\label{tab:cor_gdp_different_approaches_sig}\n",
+  "  \\begin{threeparttable}\n",
+  "    \\footnotesize\n",
+  "    \\renewcommand{\\arraystretch}{1.3}\n",
+  tex_tab, "\n\n",
+  "    \\begin{tablenotes}[flushleft]\n",
+  "      \\small\n",
+  "      \\item Significance levels: * p<0.10; ** p<0.05; *** p<0.01. ",
+  "Significance levels are based on t-statistics from OLS regression with Newey-West SEs (maximum lag order = 4).\n",
+  "    \\end{tablenotes}\n",
+  "  \\end{threeparttable}\n",
+  "\\end{table}\n"
+)
+
+writeLines(full_tex,
+           file.path("correlations_different_approaches",
+                     "correlations_different_approaches_with_sig.tex"))
 
 # WRITE OUT A LaTeX TABLE (WITH AND WITHOUT CRISIS)
 # full‐sample
