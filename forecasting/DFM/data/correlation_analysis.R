@@ -1630,6 +1630,45 @@ df_corr_compare_nc <- corr_sign_nc %>%
   left_join(corr_orig_nc, by = "topic") %>%
   left_join(corr_bpw_nc,  by = "topic")
 
+# WITHOUT CRISIS (ADD SIGNIFICANCE) #
+# (a) sign-adjusted (BCC) correlations, no-crisis
+corr_sign_nc_sig <- calc_topic_corr_gdp_sig(
+  file            = "../../AR1/gdp_growth_actual.csv",
+  econ_var        = "d_gdp",
+  topics_df       = topics_sign_q_nc,
+  selected_topics = selected_topics,
+  nw_lag          = 4
+) %>% rename(BCC_corr = corr, BCC_star = signif)
+
+# (b) original-topics correlations, no-crisis
+corr_orig_nc_sig <- calc_topic_corr_gdp_sig(
+  file            = "../../AR1/gdp_growth_actual.csv",
+  econ_var        = "d_gdp",
+  topics_df       = topics_orig_q_nc,
+  selected_topics = selected_topics
+) %>% rename(Original_corr = corr, Original_star = signif)
+
+# (c) BPW-adjusted correlations, no-crisis
+corr_bpw_nc_sig <- calc_topic_corr_gdp_sig(
+  file            = "../../AR1/gdp_growth_actual.csv",
+  econ_var        = "d_gdp",
+  topics_df       = topics_bpw_q_nc,
+  selected_topics = selected_topics
+) %>% rename(BPW_corr = corr, BPW_star = signif)
+
+# join using corr_sign_nc_sig as the driver (so the order is its order)
+df_corr_compare_nc_sig <- corr_sign_nc_sig %>%
+  left_join(corr_orig_nc_sig, by = "topic") %>%
+  left_join(corr_bpw_nc_sig,  by = "topic") %>%
+  mutate(
+    BCC_NC   = paste0(sprintf("%0.3f", BCC_corr),    BCC_star),
+    Original_NC = paste0(sprintf("%0.3f", Original_corr), Original_star),
+    BPW_NC     = paste0(sprintf("%0.3f", BPW_corr),    BPW_star),
+    ID       = topic,
+    Label    = topic_labels[topic]
+  ) %>%
+  select(ID, Label, BCC_NC, Original_NC, BPW_NC)
+
 # WRITE OUT A LaTeX TABLE (WITH CRISIS)
 
 # switch all \makecell[tc] to \makecell[tl]
@@ -1699,7 +1738,7 @@ writeLines(full_tex,
                      "correlations_different_approaches_with_sig.tex"))
 
 # WRITE OUT A LaTeX TABLE (WITH AND WITHOUT CRISIS)
-# full‐sample
+# full-sample
 df_full <- corr_sign %>% rename(BCC_with = BCC) %>%
   left_join(corr_orig   %>% rename(Original_with = Original), by="topic") %>%
   left_join(corr_bpw    %>% rename(BPW_with      = BPW),      by="topic")
@@ -1751,6 +1790,57 @@ tex_tab <- df_combined %>%
 # write to disk
 writeLines(tex_tab, file.path("correlations_different_approaches", "correlations_different_approaches_with_and_without_crisis.tex"))
 
+# WRITE OUT A LaTeX TABLE (WITH AND WITHOUT CRISIS, ADD SIGNIFICANCE)
+df_combined_sig <- df_corr_compare_sig %>%
+  left_join(df_corr_compare_nc_sig, by = c("ID","Label")) %>%
+  select(
+    ID, Label,
+    BCC, BCC_NC,
+    Original, Original_NC,
+    BPW, BPW_NC
+  )
+
+if (!dir.exists("correlations_different_approaches")) dir.create("correlations_different_approaches")
+
+tex_tab <- df_combined_sig %>%
+    kable(
+      format    = "latex",
+      booktabs  = TRUE,
+      escape    = FALSE,
+      col.names = c(
+        "ID", "Label",
+        "BCC", "BCC\\_NC",
+        "Original", "Original\\_NC",
+        "BPW", "BPW\\_NC"
+      ),
+      align     = c("l","l", rep("c", 6))
+    ) %>%
+    as.character()
+  
+full_tex <- paste0(
+  "\\begin{table}[h!]\n",
+  "  \\centering\n",
+  "  \\label{tab:cor_gdp_different_approaches_crisis_sig}\n",
+  "  \\begin{threeparttable}\n",
+  "    \\scriptsize\n",
+  "    \\renewcommand{\\arraystretch}{1.3}\n",
+  "  \\caption{Correlations of sign-adjusted topics (BCC), topics (Original), and BPW-adjusted topics (BPW) with annualized q-o-q GDP growth (first release): with and without (NC) Financial Crisis (2008-2009)}\n",
+  tex_tab, "\n\n",
+  "    \\begin{tablenotes}[flushleft]\n",
+  "      \\small\n",
+  "      \\item Significance levels: * p<0.10; ** p<0.05; *** p<0.01. ",
+  "Significance levels are based on t-statistics from OLS regression with Newey-West SEs (maximum lag order = 4).\n",
+  "    \\end{tablenotes}\n",
+  "  \\end{threeparttable}\n",
+  "\\end{table}\n"
+)
+
+writeLines(
+  full_tex,
+  file.path("correlations_different_approaches",
+            "correlations_different_approaches_with_and_without_crisis_sig.tex")
+)
+  
 # CORRELATIONS FOR TOPICS ESTIMATED ON ALL ARTICLES ----
 
 # topic correlations (estimated on all articles)
