@@ -1916,6 +1916,89 @@ tex_tab <- corr_all_combined %>%
 # write to disk
 writeLines(tex_tab, file.path("correlations_different_approaches", "correlations_original_topics_all_articles.tex"))
 
+# CORRELATIONS FOR TOPICS ESTIMATED ON ALL ARTICLES (ADD SIGNIFICANCE) #
 
+selected_topics = c('T13', 'T197', 'T12', 'T9', 'T43', 'T2', 'T20', 'T44', 'T109', 'T62')
 
+gdp_corr_all_sig <- calc_topic_corr_gdp_sig(
+  file            = "../../AR1/gdp_growth_actual.csv", 
+  econ_var        = "d_gdp",                                      
+  topics_df = topics_all$quarterly,
+  selected_topics = selected_topics,
+  nw_lag          = 4) %>% rename(Original_corr = corr, Original_star = signif)
 
+gdp_corr_all_sig_nc <- calc_topic_corr_gdp_sig(
+  file            = "../../AR1/gdp_growth_actual.csv", 
+  econ_var        = "d_gdp",                                      
+  topics_df = topics_all_q_nc,
+  selected_topics = selected_topics,
+  nw_lag          = 4) %>% rename(Original_corr_nc = corr, Original_star_nc = signif)
+
+# WRITE OUT A LaTeX TABLE
+
+topic_labels <- c(
+  T13   = "Economic Crisis",
+  T197  = "Growth and Expansion",
+  T12   = "Interviews and Opinions",
+  T9   = "Financial Aid and Funding",
+  T43   = "Market Competition",
+  T2   = "German Banking Sector",
+  T20   = "Media Reports",
+  T44  = "\\makecell[tc]{International Financial \\\\ Support}",
+  T109  = "\\makecell[tc]{Major Banks and \\\\ Investment Banking}",
+  T62  = "Economic Outlook"
+)
+
+# switch all \makecell[tc] to \makecell[tl]
+topic_labels <- purrr::map_chr(
+  topic_labels,
+  ~ stringr::str_replace_all(.x, "\\\\makecell\\[tc\\]", "\\\\makecell[tl]")
+)
+
+corr_all_combined_sig <- gdp_corr_all_sig %>%
+  left_join(gdp_corr_all_sig_nc, by = "topic") %>%
+  mutate(
+    Original = paste0(sprintf("%0.3f", Original_corr), Original_star),
+    Original_NC = paste0(sprintf("%0.3f", Original_corr_nc), Original_star_nc),
+    ID       = topic,
+    Label    = topic_labels[topic]
+  ) %>%
+  select(ID, Label, Original, Original_NC)
+
+if (!dir.exists("correlations_different_approaches")) dir.create("correlations_different_approaches")
+
+tex_tab <- corr_all_combined_sig %>%
+  kable(
+    format   = "latex",
+    booktabs = TRUE,
+    escape   = FALSE,
+    col.names = c(
+      "ID", "Label",
+      "Original (all articles)",
+      "Original\\_NC"
+    ),
+    align    = c("l","l","c","c")
+  ) %>%
+  as.character()
+
+full_tex <- paste0(
+  "\\begin{table}[h!]\n",
+  "  \\centering\n",
+  "  \\caption{Correlations of topics (Original) estimated on all articles with annualized q-o-q GDP growth (first release): full sample and without (NC) Financial Crisis (2008–2009)}\n",
+  "  \\label{tab:cor_gdp_topics_all_articles_sig}\n",
+  "  \\begin{threeparttable}\n",
+  "    \\footnotesize\n",
+  "    \\renewcommand{\\arraystretch}{1.3}\n",
+  tex_tab, "\n\n",
+  "    \\begin{tablenotes}[flushleft]\n",
+  "      \\small\n",
+  "      \\item Significance levels: * p<0.10; ** p<0.05; *** p<0.01. ",
+  "Significance levels are based on t-statistics from OLS regression with Newey-West SEs (maximum lag order = 4).\n",
+  "    \\end{tablenotes}\n",
+  "  \\end{threeparttable}\n",
+  "\\end{table}\n"
+)
+
+writeLines(full_tex,
+           file.path("correlations_different_approaches",
+                     "correlations_original_topics_all_articles_sig.tex"))
