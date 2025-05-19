@@ -2002,3 +2002,87 @@ full_tex <- paste0(
 writeLines(full_tex,
            file.path("correlations_different_approaches",
                      "correlations_original_topics_all_articles_sig.tex"))
+
+# JOINT SIGNIFICANCE ----
+data_q <- topics_sign$quarterly %>%
+  ungroup() %>%
+  inner_join(gdp_q, by="date")
+
+# Order "selected_topics" by absolute corr with GDP growth
+selected_topics <- c("T27", "T127", "T11", "T81", "T77", 
+                     "T74", "T52", "T131", "T138", "T100")
+
+corr_sort <- data_q %>%
+  summarise(
+    across(
+      all_of(selected_topics),
+      ~ cor(.x, d_gdp, use = "complete.obs")
+    )
+  ) %>%
+  pivot_longer(
+    cols      = everything(),
+    names_to  = "topic",
+    values_to = "corr"
+  ) %>%
+  arrange(abs(corr))
+
+ordered_topics <- corr_sort$topic
+
+# Run F-tests for k = 1, ..., 10
+F_tests <- map_dfr(seq_along(ordered_topics), function(k) {
+  vars_k <- ordered_topics[1:k]
+  
+  fit0 <- lm(d_gdp ~ 1, data = data_q)
+  fitk <- lm(
+    formula(paste("d_gdp ~", paste(vars_k, collapse="+"))),
+    data = data_q
+  )
+  
+  an <- anova(fit0, fitk)
+  p  <- an$`Pr(>F)`[2]
+  f  <- an$F[2]
+  st <- symnum(p,
+               corr      = FALSE,
+               cutpoints = c(0, .01, .05, .1, 1),
+               symbols   = c("***","**","*",""))
+  
+  tibble(
+    k          = k,
+    included   = paste(vars_k, collapse=", "),
+    df1        = an$Df[2],
+    df2        = an$Res.Df[2],
+    F_stat     = f,
+    p_value    = p,
+    signif     = st
+  )
+})
+
+print(block_tests)
+
+# 1) Round and format
+block_tests_fmt <- block_tests %>%
+  mutate(
+    F_stat  = round(F_stat, 2),
+    p_value = sprintf("%.3f", p_value)
+  )  %>%
+  select(k, included, F_stat, p_value, signif)
+
+# 2) Produce the LaTeX code
+latex_tab <- block_tests_fmt %>%
+  kable(
+    format    = "latex",
+    booktabs  = TRUE,
+    escape    = FALSE,
+    caption   = "F-tests of joint significance for blocks of topics, from least to most correlated",
+    label     = "tab:joint_signif",
+    col.names = c("K", "Topics included", "F-stat", "p-value", "Signif."),
+    align     = c("r", "l", "r", "r", "c")
+  ) %>%
+  kable_styling(latex_options = "hold_position") %>%
+  as.character()
+
+# 3) Write to disk
+writeLines(
+  latex_tab,
+  file.path("correlations_different_approaches", "joint_signif.tex")
+)
